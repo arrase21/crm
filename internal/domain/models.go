@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
-	TenantID  uint           `gorm:"not null;uniqueIndex:idx_users_tenant_id" json:"tenant_id"`
+	TenantID  uint           `gorm:"not null;index" json:"tenant_id"`
 	FirstName string         `gorm:"size:30;not null" json:"first_name"`
 	LastName  string         `gorm:"size:40;not null" json:"last_name"`
 	Dni       string         `gorm:"size:20;not null;uniqueIndex:idx_users_tenant_dni,composite:tenant_dni" json:"dni"`
