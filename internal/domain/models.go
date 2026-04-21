@@ -22,17 +22,18 @@ type User struct {
 	// Roles     []Role         `gorm:"many2many:user_roles;" json:"roles,omitzero"`
 }
 
-// type Department struct {
-// 	ID        uint           `gorm:"primaryKey"`
-// 	TenantID  uint           `gorm:"not null;index"`
-// 	Name      string         `gorm:"size:100;not null"`
-// 	Code      string         `gorm:"size:20;uniqueIndex:idx_dept_tenant_code,composite:tenant_code"`
-// 	IsActive  bool           `gorm:"default:true"`
-// 	CreatedAt time.Time      `gorm:"autoCreateTime"`
-// 	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
-// 	DeletedAt gorm.DeletedAt `gorm:"index"`
-// 	Positions []Position     `gorm:"foreignKey:DepartmentID"`
-// }
+type Department struct {
+	ID        uint           `gorm:"primaryKey"`
+	TenantID  uint           `gorm:"not null;index"`
+	Name      string         `gorm:"size:100;not null"`
+	Code      string         `gorm:"size:20;uniqueIndex:idx_dept_tenant_code,composite:tenant_code"`
+	IsActive  bool           `gorm:"default:true"`
+	CreatedAt time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	// Positions []Position     `gorm:"foreignKey:DepartmentID"`
+}
+
 //
 // type Position struct {
 // 	ID           uint           `gorm:"primaryKey" json:"id"`

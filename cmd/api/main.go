@@ -9,6 +9,7 @@ import (
 	"github.com/arrase21/crm/internal/repository"
 	"github.com/arrase21/crm/internal/service"
 	"github.com/arrase21/crm/internal/transport/http"
+	"github.com/arrase21/crm/internal/transport/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -48,10 +49,16 @@ func main() {
 	userRepo := repository.NewGormUserRepository(db)
 	userSvc := service.NewUserService(userRepo)
 	userHandler := http.NewUserHandler(userSvc)
+	//Department
+	deptRepo := repository.NewGormDepartmentRepository(db)
+	deptSvc := service.NewDepartmentService(deptRepo)
+	deptHandler := http.NewDepartmentHandler(deptSvc)
 
 	router := gin.Default()
 
 	api := router.Group("/api/v1")
+	api.Use(middleware.TenantMiddleware())
+
 	{
 		users := api.Group("/users")
 		{
@@ -61,6 +68,15 @@ func main() {
 			users.GET("/list", userHandler.List)
 			users.PUT("/:id", userHandler.Update)
 			users.DELETE("/:id", userHandler.Delete)
+		}
+		departments := api.Group("/departments")
+		{
+			departments.POST("", deptHandler.Create)
+			departments.GET("/:id", deptHandler.GetByID)
+			departments.GET("", deptHandler.GetByCode) // ?code=xxx
+			departments.GET("/list", deptHandler.List)
+			departments.PUT("/:id", deptHandler.Update)
+			departments.DELETE("/:id", deptHandler.Delete)
 		}
 	}
 

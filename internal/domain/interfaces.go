@@ -17,3 +17,13 @@ type UserRepo interface {
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id uint) error
 }
+
+type DepartmentRepo interface {
+	Create(ctx context.Context, dept *Department) error
+	GetByID(ctx context.Context, id uint) (*Department, error)
+	GetByCode(ctx context.Context, code string) (*Department, error)
+	GetByName(ctx context.Context, name string) (*Department, error)
+	List(ctx context.Context, page, limit int) ([]Department, int64, error)
+	Update(ctx context.Context, dept *Department) error
+	Delete(ctx context.Context, id uint) error
+}

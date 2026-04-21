@@ -11,16 +11,6 @@ import (
 // ============================================
 // MOCK IMPLEMENTATION - Simula el Repository
 // ============================================
-//
-// ¿Por qué un mock?
-// Los tests de SERVICE deben testear la LÓGICA DE NEGOCIO,
-// NO la base de datos. Por eso simulamos (mock) el repository.
-//
-// En Go esto es super fácil gracias a las interfaces:
-// Si tu struct acepta una interfaz, podés pasar cualquier cosa
-// que la implemente (incluyendo mocks).
-//
-// MockUserRepo implements domain.UserRepo for testing
 type MockUserRepo struct {
 	// Storage simula la DB
 	users      map[uint]*domain.User
