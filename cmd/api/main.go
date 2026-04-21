@@ -41,6 +41,8 @@ func main() {
 	// Nota: Optional
 	if err := db.AutoMigrate(
 		&domain.User{},
+		&domain.Department{},
+		&domain.Position{},
 	); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
@@ -53,6 +55,10 @@ func main() {
 	deptRepo := repository.NewGormDepartmentRepository(db)
 	deptSvc := service.NewDepartmentService(deptRepo)
 	deptHandler := http.NewDepartmentHandler(deptSvc)
+	// Positions
+	pstnRepo := repository.NewGormPositionRepository(db)
+	pstnSvc := service.NewPositionService(pstnRepo)
+	pstnHandler := http.NewPositionHandler(pstnSvc)
 
 	router := gin.Default()
 
@@ -77,6 +83,15 @@ func main() {
 			departments.GET("/list", deptHandler.List)
 			departments.PUT("/:id", deptHandler.Update)
 			departments.DELETE("/:id", deptHandler.Delete)
+		}
+		positions := api.Group("/positions")
+		{
+			positions.POST("", pstnHandler.Create)
+			positions.GET("/:id", pstnHandler.GetByID)
+			positions.GET("/:id", pstnHandler.GetByName)
+			positions.GET("/list", pstnHandler.List)
+			positions.PUT("/:id", pstnHandler.Update)
+			positions.DELETE("/:id", pstnHandler.Delete)
 		}
 	}
 

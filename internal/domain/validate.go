@@ -99,3 +99,38 @@ func (d *Department) ValidateAll() error {
 	}
 	return nil
 }
+
+func (p *Position) Normalize() {
+	p.Name = strings.TrimSpace(p.Name)
+	p.Description = strings.TrimSpace(p.Description)
+}
+
+func (p *Position) Required() error {
+	p.Normalize()
+
+	if p.Name == "" {
+		return errors.New("name is required")
+	}
+	return nil
+}
+
+func (p *Position) Validate() error {
+	if len(p.Name) > 100 {
+		return errors.New("name must be at most 100 characters")
+	}
+	if len(p.Description) > 255 {
+		return errors.New("description must be at most 255 characters")
+	}
+	return nil
+}
+
+func (p *Position) ValidateAll() error {
+	p.Normalize()
+	if err := p.Required(); err != nil {
+		return err
+	}
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
