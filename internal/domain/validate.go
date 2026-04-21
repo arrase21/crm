@@ -64,3 +64,38 @@ func (u *User) ValidateAll() error {
 	}
 	return nil
 }
+
+func (d *Department) Normalize() {
+	d.Name = strings.TrimSpace(d.Name)
+	d.Code = strings.TrimSpace(d.Code)
+}
+func (d *Department) Required() error {
+	d.Normalize()
+
+	if d.Name == "" {
+		return errors.New("name is required")
+	}
+	if d.Code == "" {
+		return errors.New("code is required")
+	}
+	return nil
+}
+func (d *Department) Validate() error {
+	if len(d.Name) > 100 {
+		return errors.New("name must be at most 100 characters")
+	}
+	if len(d.Code) > 20 {
+		return errors.New("code must be at most 20 characters")
+	}
+	return nil
+}
+func (d *Department) ValidateAll() error {
+	d.Normalize() // Normalizar UNA sola vez al inicio
+	if err := d.Required(); err != nil {
+		return err
+	}
+	if err := d.Validate(); err != nil {
+		return err
+	}
+	return nil
+}

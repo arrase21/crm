@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
-	TenantID  uint           `gorm:"not null;uniqueIndex:idx_users_tenant_id" json:"tenant_id"`
+	TenantID  uint           `gorm:"not null;index" json:"tenant_id"`
 	FirstName string         `gorm:"size:30;not null" json:"first_name"`
 	LastName  string         `gorm:"size:40;not null" json:"last_name"`
 	Dni       string         `gorm:"size:20;not null;uniqueIndex:idx_users_tenant_dni,composite:tenant_dni" json:"dni"`
@@ -22,17 +22,18 @@ type User struct {
 	// Roles     []Role         `gorm:"many2many:user_roles;" json:"roles,omitzero"`
 }
 
-// type Department struct {
-// 	ID        uint           `gorm:"primaryKey"`
-// 	TenantID  uint           `gorm:"not null;index"`
-// 	Name      string         `gorm:"size:100;not null"`
-// 	Code      string         `gorm:"size:20;uniqueIndex:idx_dept_tenant_code,composite:tenant_code"`
-// 	IsActive  bool           `gorm:"default:true"`
-// 	CreatedAt time.Time      `gorm:"autoCreateTime"`
-// 	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
-// 	DeletedAt gorm.DeletedAt `gorm:"index"`
-// 	Positions []Position     `gorm:"foreignKey:DepartmentID"`
-// }
+type Department struct {
+	ID        uint           `gorm:"primaryKey"`
+	TenantID  uint           `gorm:"not null;index"`
+	Name      string         `gorm:"size:100;not null"`
+	Code      string         `gorm:"size:20;uniqueIndex:idx_dept_tenant_code,composite:tenant_code"`
+	IsActive  bool           `gorm:"default:true"`
+	CreatedAt time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	// Positions []Position     `gorm:"foreignKey:DepartmentID"`
+}
+
 //
 // type Position struct {
 // 	ID           uint           `gorm:"primaryKey" json:"id"`
