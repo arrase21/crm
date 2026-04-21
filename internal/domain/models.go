@@ -31,23 +31,22 @@ type Department struct {
 	CreatedAt time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt gorm.DeletedAt `gorm:"index"`
-	// Positions []Position     `gorm:"foreignKey:DepartmentID"`
+	Positions []Position     `gorm:"foreignKey:DepartmentID"`
 }
 
-//
-// type Position struct {
-// 	ID           uint           `gorm:"primaryKey" json:"id"`
-// 	TenantID     uint           `gorm:"not null;index" json:"tenant_id"`
-// 	DepartmentID uint           `gorm:"index"`
-// 	NamePosition string         `gorm:"size:100;not null" json:"name_position"`
-// 	Description  string         `gorm:"size:255;not null" json:"description"`
-// 	IsActive     bool           `gorm:"default:true"`
-// 	CreatedAt    time.Time      `gorm:"not null" json:"created_at"`
-// 	UpdatedAt    time.Time      `gorm:"not null" json:"updated_at"`
-// 	DeletedAt    gorm.DeletedAt `gorm:"index:idx_users_deleted_at" json:"deleted_at,omitzero"`
-// 	Deparment    Department     `gorm:"foreignKey:DepartmentID"`
-// }
-//
+type Position struct {
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	TenantID     uint           `gorm:"not null;index" json:"tenant_id"`
+	DepartmentID uint           `gorm:"index"`
+	Name         string         `gorm:"size:100;not null" json:"name"`
+	Description  string         `gorm:"size:255;not null" json:"description"`
+	IsActive     bool           `gorm:"default:true" json:"is_active"`
+	CreatedAt    time.Time      `gorm:"not null" json:"created_at"`
+	UpdatedAt    time.Time      `gorm:"not null" json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at,omitzero"`
+	Department   Department     `gorm:"foreignKey:DepartmentID"`
+}
+
 // type Employee struct {
 // 	ID           uint `gorm:"primaryKey"`
 // 	TenantID     uint `gorm:"not null;index"`

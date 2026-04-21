@@ -27,3 +27,12 @@ type DepartmentRepo interface {
 	Update(ctx context.Context, dept *Department) error
 	Delete(ctx context.Context, id uint) error
 }
+
+type PositionRepo interface {
+	Create(ctx context.Context, pstn *Position) error
+	GetByID(ctx context.Context, id uint) (*Position, error)
+	GetByName(ctx context.Context, name string) (*Position, error)
+	List(ctx context.Context, page, limit int) ([]Position, int64, error)
+	Update(ctx context.Context, pstn *Position) error
+	Delete(ctx context.Context, id uint) error
+}

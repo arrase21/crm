@@ -13,6 +13,8 @@ var (
 	ErrDepartmentNotFound   = errors.New("department not found")
 	ErrDepartmentCodeExists = errors.New("department code already exists")
 	ErrDepartmentNameExists = errors.New("department name already exists")
-	ErrPositionNotFound     = errors.New("position not found")
-	ErrPositionCodeExists   = errors.New("position code already exists")
+
+	ErrPositionNotFound      = errors.New("position not found")
+	ErrPositionAlreadyExists = errors.New("position already exists")
+	ErrPositionNameExists    = errors.New("position name already exists")
 )
