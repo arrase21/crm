@@ -47,21 +47,22 @@ type Position struct {
 	Department   Department     `gorm:"foreignKey:DepartmentID"`
 }
 
-// type Employee struct {
-// 	ID           uint `gorm:"primaryKey"`
-// 	TenantID     uint `gorm:"not null;index"`
-// 	UserID       uint `gorm:"not null;uniqueIndex"`
-// 	DepartmentID uint `gorm:"index"`
-// 	PositionID   uint `gorm:"index"`
-// 	IsActive     bool `gorm:"default:true;index"`
-// 	CreatedAt    time.Time
-// 	UpdatedAt    time.Time
-// 	DeletedAt    gorm.DeletedAt     `gorm:"index"`
-// 	User         User               `gorm:"foreignKey:UserID"`
-// 	Department   Department         `gorm:"foreignKey:DepartmentID"`
-// 	Position     Position           `gorm:"foreignKey:PositionID"`
-// 	Contracts    []EmployeeContract `gorm:"foreignKey:EmployeeID"`
-// }
+type Employee struct {
+	ID           uint `gorm:"primaryKey"`
+	TenantID     uint `gorm:"not null;index"`
+	UserID       uint `gorm:"not null;uniqueIndex"`
+	DepartmentID uint `gorm:"index"`
+	PositionID   uint `gorm:"index"`
+	IsActive     bool `gorm:"default:true;index"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    gorm.DeletedAt `gorm:"index"`
+	User         User           `gorm:"foreignKey:UserID"`
+	Department   Department     `gorm:"foreignKey:DepartmentID"`
+	Position     Position       `gorm:"foreignKey:PositionID"`
+	// Contracts    []EmployeeContract `gorm:"foreignKey:EmployeeID"`
+}
+
 // type EmployeeContract struct {
 // 	ID             uint `gorm:"primaryKey"`
 // 	TenantID       uint `gorm:"not null;index"`

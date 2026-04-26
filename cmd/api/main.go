@@ -51,13 +51,17 @@ func main() {
 	userRepo := repository.NewGormUserRepository(db)
 	userSvc := service.NewUserService(userRepo)
 	userHandler := http.NewUserHandler(userSvc)
-	//Department
-	deptRepo := repository.NewGormDepartmentRepository(db)
-	deptSvc := service.NewDepartmentService(deptRepo)
-	deptHandler := http.NewDepartmentHandler(deptSvc)
-	// Positions
+
+	// Positions (se declara primero porque lo necesita DepartmentService)
 	pstnRepo := repository.NewGormPositionRepository(db)
-	pstnSvc := service.NewPositionService(pstnRepo)
+
+	// Department
+	deptRepo := repository.NewGormDepartmentRepository(db)
+	deptSvc := service.NewDepartmentService(deptRepo, pstnRepo)
+	deptHandler := http.NewDepartmentHandler(deptSvc)
+
+	// Positions
+	pstnSvc := service.NewPositionService(pstnRepo, deptRepo)
 	pstnHandler := http.NewPositionHandler(pstnSvc)
 
 	router := gin.Default()
@@ -88,7 +92,7 @@ func main() {
 		{
 			positions.POST("", pstnHandler.Create)
 			positions.GET("/:id", pstnHandler.GetByID)
-			positions.GET("/:id", pstnHandler.GetByName)
+			positions.GET("/search", pstnHandler.GetByName) // ?name=xxx
 			positions.GET("/list", pstnHandler.List)
 			positions.PUT("/:id", pstnHandler.Update)
 			positions.DELETE("/:id", pstnHandler.Delete)

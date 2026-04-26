@@ -23,7 +23,7 @@ func (r *GormDepartmentRepo) Create(ctx context.Context, dept *domain.Department
 	if dept == nil {
 		return errors.New("department cannot be nil")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (r *GormDepartmentRepo) GetByID(ctx context.Context, id uint) (*domain.Depa
 	if id == 0 {
 		return nil, errors.New("invalid department id")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (r *GormDepartmentRepo) GetByCode(ctx context.Context, code string) (*domai
 	if code == "" {
 		return nil, errors.New("department code cannot be nil")
 	}
-	tenanID, err := tenatFromctx(ctx)
+	tenanID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -85,12 +85,12 @@ func (r *GormDepartmentRepo) GetByName(ctx context.Context, name string) (*domai
 	if name == "" {
 		return nil, errors.New("department name cannot be nil")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var dept domain.Department
-	err = r.db.WithContext(ctx).Where("tenant_id = ? AND name =?", tenantID, name).First(&dept).Error
+	err = r.db.WithContext(ctx).Where("tenant_id = ? AND name = ?", tenantID, name).First(&dept).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrDepartmentNotFound
@@ -101,7 +101,7 @@ func (r *GormDepartmentRepo) GetByName(ctx context.Context, name string) (*domai
 }
 
 func (r *GormDepartmentRepo) List(ctx context.Context, page, limit int) ([]domain.Department, int64, error) {
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -137,7 +137,7 @@ func (r *GormDepartmentRepo) Update(ctx context.Context, dept *domain.Department
 	if dept == nil || dept.ID == 0 {
 		return errors.New("user cannot be nil or have zero")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (r *GormDepartmentRepo) Delete(ctx context.Context, id uint) error {
 	if id == 0 {
 		return errors.New("invalid department id")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return err
 	}

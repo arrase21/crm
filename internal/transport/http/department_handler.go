@@ -181,6 +181,7 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "department updated"})
 }

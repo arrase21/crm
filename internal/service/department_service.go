@@ -10,11 +10,17 @@ import (
 
 type DepartmentService struct {
 	departmentRepo domain.DepartmentRepo
+	positionRepo   domain.PositionRepo
 }
 
-func NewDepartmentService(u domain.DepartmentRepo) *DepartmentService {
+func NewDepartmentService(deptRepo domain.DepartmentRepo, posRepo ...domain.PositionRepo) *DepartmentService {
+	var pr domain.PositionRepo
+	if len(posRepo) > 0 {
+		pr = posRepo[0]
+	}
 	return &DepartmentService{
-		departmentRepo: u,
+		departmentRepo: deptRepo,
+		positionRepo:   pr,
 	}
 }
 
@@ -82,6 +88,14 @@ func (s *DepartmentService) Update(ctx context.Context, dept *domain.Department)
 	if existing != nil && existing.ID != dept.ID {
 		return domain.ErrDepartmentCodeExists
 	}
+	existingName, err := s.departmentRepo.GetByName(ctx, dept.Name)
+	if err != nil && !errors.Is(err, domain.ErrDepartmentNotFound) {
+		return fmt.Errorf("error checking  existing name: %w", err)
+	}
+	if existingName != nil && existingName.ID != dept.ID {
+		return domain.ErrDepartmentNameExists
+	}
+
 	return s.departmentRepo.Update(ctx, dept)
 }
 
@@ -89,5 +103,17 @@ func (s *DepartmentService) Delete(ctx context.Context, id uint) error {
 	if id == 0 {
 		return errors.New("error department id canno be nil or zero")
 	}
+
+	// Check if there are positions associated with this department (only if positionRepo is provided)
+	if s.positionRepo != nil {
+		count, err := s.positionRepo.CountByDepartment(ctx, id)
+		if err != nil {
+			return fmt.Errorf("error checking positions: %w", err)
+		}
+		if count > 0 {
+			return fmt.Errorf("cannot delete department: there are %d positions associated", count)
+		}
+	}
+
 	return s.departmentRepo.Delete(ctx, id)
 }

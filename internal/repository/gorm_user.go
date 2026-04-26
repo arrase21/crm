@@ -23,9 +23,9 @@ func (r *GormUserRepo) Create(ctx context.Context, usr *domain.User) error {
 	if usr == nil {
 		return errors.New("user cannot be nil")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 	usr.TenantID = tenantID
 	err = r.db.WithContext(ctx).Create(usr).Error
@@ -51,7 +51,7 @@ func (r *GormUserRepo) GetByID(ctx context.Context, id uint) (*domain.User, erro
 	if id == 0 {
 		return nil, errors.New("invalid user id")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (r *GormUserRepo) GetByDNI(ctx context.Context, dni string) (*domain.User, 
 	if dni == "" {
 		return nil, errors.New("dni cannot be empty")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -85,8 +85,45 @@ func (r *GormUserRepo) GetByDNI(ctx context.Context, dni string) (*domain.User, 
 	return &user, nil
 }
 
+func (r *GormUserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	if email == "" {
+		return nil, errors.New("email cannot be empty")
+	}
+	tenantID, err := tenantFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var user domain.User
+	err = r.db.WithContext(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+func (r *GormUserRepo) GetByPhone(ctx context.Context, phone string) (*domain.User, error) {
+	if phone == "" {
+		return nil, errors.New("phone cannot be empty")
+	}
+	tenantID, err := tenantFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var user domain.User
+	err = r.db.WithContext(ctx).Where("tenant_id = ? AND phone = ?", tenantID, phone).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *GormUserRepo) List(ctx context.Context, page, limit int) ([]domain.User, int64, error) {
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -114,7 +151,7 @@ func (r *GormUserRepo) Update(ctx context.Context, usr *domain.User) error {
 	if usr == nil || usr.ID == 0 {
 		return errors.New("user cannot be nil or have zero id")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -124,7 +161,20 @@ func (r *GormUserRepo) Update(ctx context.Context, usr *domain.User) error {
 	}
 	usr.TenantID = existing.TenantID
 
-	err = r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ? AND tenant_id = ?", usr.ID, tenantID).Updates(usr).Error
+	// err = r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ? AND tenant_id = ?", usr.ID, tenantID).Updates(usr).Error
+	updates := map[string]interface{}{
+		"first_name": usr.FirstName,
+		"last_name":  usr.LastName,
+		"dni":        usr.Dni,
+		"phone":      usr.Phone,
+		"email":      usr.Email,
+	}
+
+	err = r.db.WithContext(ctx).Model(&domain.User{}).
+		Where("id = ? AND tenant_id = ?", usr.ID, tenantID).
+		Select("first_name", "last_name", "dni", "phone", "email").
+		Updates(updates).Error
+
 	if err != nil {
 		if isDuplicateError(err) {
 			if strings.Contains(err.Error(), "dni") {
@@ -147,7 +197,7 @@ func (r *GormUserRepo) Delete(ctx context.Context, id uint) error {
 	if id == 0 {
 		return errors.New("invalid user id")
 	}
-	tenantID, err := tenatFromctx(ctx)
+	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return err
 	}

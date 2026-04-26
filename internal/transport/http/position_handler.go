@@ -57,7 +57,17 @@ func (h *PositionHandler) GetByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	position, err := h.svc.GetByID(c.Request.Context(), uint(id))
+
+	// Check if we should include department in response
+	withDepartment := c.Query("include_department")
+
+	var position *domain.Position
+	if withDepartment == "true" {
+		position, err = h.svc.GetByIDWithDepartment(c.Request.Context(), uint(id))
+	} else {
+		position, err = h.svc.GetByID(c.Request.Context(), uint(id))
+	}
+
 	if err != nil {
 		if errors.Is(err, domain.ErrPositionNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "position not found"})
@@ -90,11 +100,28 @@ func (h *PositionHandler) GetByName(c *gin.Context) {
 func (h *PositionHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	departmentIDStr := c.Query("department_id")
+	var positions []domain.Position
+	var total int64
+	var err error
 
-	positions, total, err := h.svc.List(c.Request.Context(), page, limit)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	if departmentIDStr != "" {
+		departmentID, err := strconv.ParseUint(departmentIDStr, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid department_id"})
+			return
+		}
+		positions, total, err = h.svc.ListByDepartment(c.Request.Context(), uint(departmentID))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		positions, total, err = h.svc.List(c.Request.Context(), page, limit)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	totalPages := int(total) / limit
