@@ -17,13 +17,16 @@ type MockUserRepo struct {
 	nextID     uint
 	dniIndex   map[string]*domain.User
 	emailIndex map[string]*domain.User
+	phoneIndex map[string]*domain.User
 	// Control para simular errores
-	CreateErr   error
-	GetByIDErr  error
-	GetByDNIErr error
-	UpdateErr   error
-	DeleteErr   error
-	ListErr     error
+	CreateErr     error
+	GetByIDErr    error
+	GetByDNIErr   error
+	GetByEmailErr error
+	GetByPhoneErr error
+	UpdateErr     error
+	DeleteErr     error
+	ListErr       error
 }
 
 // Helper para crear un mock con datos iniciales
@@ -33,6 +36,7 @@ func NewMockUserRepo() *MockUserRepo {
 		nextID:     1,
 		dniIndex:   make(map[string]*domain.User),
 		emailIndex: make(map[string]*domain.User),
+		phoneIndex: make(map[string]*domain.User),
 	}
 }
 func (m *MockUserRepo) Create(ctx context.Context, usr *domain.User) error {
@@ -51,8 +55,10 @@ func (m *MockUserRepo) Create(ctx context.Context, usr *domain.User) error {
 	m.users[usr.ID] = usr
 	m.dniIndex[usr.Dni] = usr
 	m.emailIndex[usr.Email] = usr
+	m.phoneIndex[usr.Phone] = usr
 	return nil
 }
+
 func (m *MockUserRepo) GetByID(ctx context.Context, id uint) (*domain.User, error) {
 	if m.GetByIDErr != nil {
 		return nil, m.GetByIDErr
@@ -79,6 +85,35 @@ func (m *MockUserRepo) GetByDNI(ctx context.Context, dni string) (*domain.User, 
 	}
 	return user, nil
 }
+
+func (m *MockUserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	if m.GetByEmailErr != nil {
+		return nil, m.GetByEmailErr
+	}
+	if email == "" {
+		return nil, errors.New("email cannot be nil")
+	}
+	user, exists := m.emailIndex[email]
+	if !exists {
+		return nil, domain.ErrUserNotFound
+	}
+	return user, nil
+}
+
+func (m *MockUserRepo) GetByPhone(ctx context.Context, phone string) (*domain.User, error) {
+	if m.GetByPhoneErr != nil {
+		return nil, m.GetByPhoneErr
+	}
+	if phone == "" {
+		return nil, errors.New("phone cannot be nil")
+	}
+	user, exists := m.phoneIndex[phone]
+	if !exists {
+		return nil, domain.ErrUserNotFound
+	}
+	return user, nil
+}
+
 func (m *MockUserRepo) List(ctx context.Context, page, limit int) ([]domain.User, int64, error) {
 	if m.ListErr != nil {
 		return nil, 0, m.ListErr
@@ -121,10 +156,12 @@ func (m *MockUserRepo) Update(ctx context.Context, usr *domain.User) error {
 	if old, exists := m.users[usr.ID]; exists {
 		delete(m.dniIndex, old.Dni)
 		delete(m.emailIndex, old.Email)
+		delete(m.phoneIndex, old.Phone)
 	}
 	m.users[usr.ID] = usr
 	m.dniIndex[usr.Dni] = usr
 	m.emailIndex[usr.Email] = usr
+	m.phoneIndex[usr.Phone] = usr
 	return nil
 }
 func (m *MockUserRepo) Delete(ctx context.Context, id uint) error {
@@ -140,6 +177,7 @@ func (m *MockUserRepo) Delete(ctx context.Context, id uint) error {
 	}
 	delete(m.dniIndex, user.Dni)
 	delete(m.emailIndex, user.Email)
+	delete(m.phoneIndex, user.Phone)
 	delete(m.users, id)
 	return nil
 }

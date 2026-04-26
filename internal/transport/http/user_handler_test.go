@@ -18,22 +18,28 @@ import (
 // MOCK SERVICE - Simula el Service para tests HTTP
 // ============================================
 type MockUserService struct {
-	users       map[uint]*domain.User
-	nextID      uint
-	dniIndex    map[string]*domain.User
-	createErr   error
-	getByIDErr  error
-	getByDNIErr error
-	updateErr   error
-	deleteErr   error
-	listErr     error
+	users         map[uint]*domain.User
+	nextID        uint
+	dniIndex      map[string]*domain.User
+	emailIndex    map[string]*domain.User
+	phoneIndex    map[string]*domain.User
+	createErr     error
+	getByIDErr    error
+	getByDNIErr   error
+	getByEmailErr error
+	getByPhoneErr error
+	updateErr     error
+	deleteErr     error
+	listErr       error
 }
 
 func NewMockUserService() *MockUserService {
 	return &MockUserService{
-		users:    make(map[uint]*domain.User),
-		nextID:   1,
-		dniIndex: make(map[string]*domain.User),
+		users:      make(map[uint]*domain.User),
+		nextID:     1,
+		dniIndex:   make(map[string]*domain.User),
+		emailIndex: make(map[string]*domain.User),
+		phoneIndex: make(map[string]*domain.User),
 	}
 }
 
@@ -47,10 +53,18 @@ func (m *MockUserService) Create(ctx context.Context, usr *domain.User) error {
 	if _, exists := m.dniIndex[usr.Dni]; exists {
 		return domain.ErrDniAlreadyExist
 	}
+	if _, exists := m.emailIndex[usr.Email]; exists {
+		return domain.ErrEmailAlreadyExist
+	}
+	if _, exists := m.phoneIndex[usr.Email]; exists {
+		return domain.ErrPhoneAlreadyExist
+	}
 	usr.ID = m.nextID
 	m.nextID++
 	m.users[usr.ID] = usr
 	m.dniIndex[usr.Dni] = usr
+	m.emailIndex[usr.Email] = usr
+	m.phoneIndex[usr.Phone] = usr
 	return nil
 }
 
@@ -82,6 +96,34 @@ func (m *MockUserService) GetByDNI(ctx context.Context, dni string) (*domain.Use
 	return user, nil
 }
 
+func (m *MockUserService) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	if m.getByEmailErr != nil {
+		return nil, m.getByEmailErr
+	}
+	if email == "" {
+		return nil, domain.ErrUserNotFound
+	}
+	user, exists := m.emailIndex[email]
+	if !exists {
+		return nil, domain.ErrUserNotFound
+	}
+	return user, nil
+}
+
+func (m *MockUserService) GetByPhone(ctx context.Context, phone string) (*domain.User, error) {
+	if m.getByPhoneErr != nil {
+		return nil, m.getByPhoneErr
+	}
+	if phone == "" {
+		return nil, domain.ErrUserNotFound
+	}
+	user, exists := m.phoneIndex[phone]
+	if !exists {
+		return nil, domain.ErrUserNotFound
+	}
+	return user, nil
+}
+
 func (m *MockUserService) List(ctx context.Context, page, limit int) ([]domain.User, int64, error) {
 	if m.listErr != nil {
 		return nil, 0, m.listErr
@@ -106,9 +148,21 @@ func (m *MockUserService) Update(ctx context.Context, usr *domain.User) error {
 	if existing, exists := m.dniIndex[usr.Dni]; exists && existing.ID != usr.ID {
 		return domain.ErrDniAlreadyExist
 	}
+	if existing, exists := m.emailIndex[usr.Email]; exists && existing.ID != usr.ID {
+		return domain.ErrEmailAlreadyExist
+	}
+	if existing, exists := m.phoneIndex[usr.Phone]; exists && existing.ID != usr.ID {
+		return domain.ErrPhoneAlreadyExist
+	}
+	if old, exists := m.users[usr.ID]; exists {
+		delete(m.dniIndex, old.Dni)
+		delete(m.emailIndex, old.Email)
+		delete(m.phoneIndex, old.Phone)
+	}
 	m.users[usr.ID] = usr
-	delete(m.dniIndex, usr.Dni)
 	m.dniIndex[usr.Dni] = usr
+	m.emailIndex[usr.Email] = usr
+	m.phoneIndex[usr.Phone] = usr
 	return nil
 }
 
@@ -124,6 +178,8 @@ func (m *MockUserService) Delete(ctx context.Context, id uint) error {
 		return domain.ErrUserNotFound
 	}
 	delete(m.dniIndex, user.Dni)
+	delete(m.emailIndex, user.Email)
+	delete(m.phoneIndex, user.Phone)
 	delete(m.users, id)
 	return nil
 }

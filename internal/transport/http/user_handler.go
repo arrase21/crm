@@ -66,15 +66,10 @@ func (h *UserHandler) Create(c *gin.Context) {
 		BirthDay:  birth,
 	}
 
-	user.Normalize()
-
-	if err := user.ValidateAll(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
 	if err := h.svc.Create(c.Request.Context(), user); err != nil {
-		if errors.Is(err, domain.ErrDniAlreadyExist) {
+		if errors.Is(err, domain.ErrDniAlreadyExist) ||
+			errors.Is(err, domain.ErrEmailAlreadyExist) ||
+			errors.Is(err, domain.ErrPhoneAlreadyExist) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
@@ -245,14 +240,10 @@ func (h *UserHandler) Update(c *gin.Context) {
 		user.BirthDay = existingUser.BirthDay
 	}
 
-	user.Normalize()
-	if err := user.ValidateAll(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
 	if err := h.svc.Update(c.Request.Context(), user); err != nil {
-		if errors.Is(err, domain.ErrDniAlreadyExist) {
+		if errors.Is(err, domain.ErrDniAlreadyExist) ||
+			errors.Is(err, domain.ErrEmailAlreadyExist) ||
+			errors.Is(err, domain.ErrPhoneAlreadyExist) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}

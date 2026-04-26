@@ -17,4 +17,8 @@ var (
 	ErrPositionNotFound      = errors.New("position not found")
 	ErrPositionAlreadyExists = errors.New("position already exists")
 	ErrPositionNameExists    = errors.New("position name already exists")
+
+	ErrEmployeeNotFound      = errors.New("employee not found")
+	ErrEmployeeAlreadyExists = errors.New("employee already exists")
+	ErrEmployeeNameExists    = errors.New("employee name already exists")
 )

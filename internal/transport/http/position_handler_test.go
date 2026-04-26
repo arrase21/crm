@@ -29,6 +29,31 @@ type MockPositionService struct {
 	listErr      error
 }
 
+// Add new methods to implement domain.PositionRepo interface
+func (m *MockPositionService) GetByIDWithDepartment(ctx context.Context, id uint) (*domain.Position, error) {
+	return m.GetByID(ctx, id)
+}
+
+func (m *MockPositionService) ListByDepartment(ctx context.Context, deptID uint) ([]domain.Position, int64, error) {
+	var result []domain.Position
+	for _, p := range m.positions {
+		if p.DepartmentID == deptID {
+			result = append(result, *p)
+		}
+	}
+	return result, int64(len(result)), nil
+}
+
+func (m *MockPositionService) CountByDepartment(ctx context.Context, deptID uint) (int64, error) {
+	var count int64
+	for _, p := range m.positions {
+		if p.DepartmentID == deptID {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func NewMockPositionService() *MockPositionService {
 	return &MockPositionService{
 		positions: make(map[uint]*domain.Position),

@@ -69,6 +69,21 @@ func (s *UserService) Update(ctx context.Context, usr *domain.User) error {
 	if existing != nil && existing.ID != usr.ID {
 		return domain.ErrDniAlreadyExist
 	}
+	existing, err = s.userRepo.GetByEmail(ctx, usr.Email)
+	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
+		return fmt.Errorf("error checking existing  email: %w", err)
+	}
+	if existing != nil && existing.ID != usr.ID {
+		return domain.ErrEmailAlreadyExist
+	}
+
+	existing, err = s.userRepo.GetByPhone(ctx, usr.Phone)
+	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
+		return fmt.Errorf("error checking existing phone: %w", err)
+	}
+	if existing != nil && existing.ID != usr.ID {
+		return domain.ErrPhoneAlreadyExist
+	}
 	return s.userRepo.Update(ctx, usr)
 }
 

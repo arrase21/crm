@@ -13,15 +13,17 @@ import (
 // ============================================
 
 type MockPositionRepo struct {
-	positions    map[uint]*domain.Position
-	nextID       uint
-	nameIndex    map[string]*domain.Position
-	CreateErr    error
-	GetByIDErr   error
-	GetByNameErr error
-	UpdateErr    error
-	DeleteErr    error
-	ListErr      error
+	positions       map[uint]*domain.Position
+	nextID          uint
+	nameIndex       map[string]*domain.Position
+	departmentIndex map[uint][]*domain.Position
+	CreateErr         error
+	GetByIDErr        error
+	GetByNameErr      error
+	UpdateErr         error
+	DeleteErr         error
+	ListErr           error
+	CountByDepartmentErr error
 }
 
 func NewMockPositionRepo() *MockPositionRepo {
@@ -104,6 +106,51 @@ func (m *MockPositionRepo) List(ctx context.Context, page, limit int) ([]domain.
 		end = len(result)
 	}
 	return result[offset:end], total, nil
+}
+
+func (m *MockPositionRepo) ListByDepartment(ctx context.Context, departmentID uint) ([]domain.Position, int64, error) {
+	if departmentID == 0 {
+		return nil, 0, errors.New("department id is required")
+	}
+	var result []domain.Position
+	var total int64
+	for _, p := range m.positions {
+		if p.DepartmentID == departmentID {
+			result = append(result, *p)
+			total++
+		}
+	}
+	return result, total, nil
+}
+
+func (m *MockPositionRepo) CountByDepartment(ctx context.Context, departmentID uint) (int64, error) {
+	if m.CountByDepartmentErr != nil {
+		return 0, m.CountByDepartmentErr
+	}
+	if departmentID == 0 {
+		return 0, errors.New("department id is required")
+	}
+	var total int64
+	for _, p := range m.positions {
+		if p.DepartmentID == departmentID {
+			total++
+		}
+	}
+	return total, nil
+}
+
+func (m *MockPositionRepo) GetByIDWithDepartment(ctx context.Context, id uint) (*domain.Position, error) {
+	if m.GetByIDErr != nil {
+		return nil, m.GetByIDErr
+	}
+	if id == 0 {
+		return nil, errors.New("invalid position id")
+	}
+	pstn, exists := m.positions[id]
+	if !exists {
+		return nil, domain.ErrPositionNotFound
+	}
+	return pstn, nil
 }
 
 func (m *MockPositionRepo) Update(ctx context.Context, pstn *domain.Position) error {

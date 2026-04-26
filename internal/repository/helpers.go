@@ -9,10 +9,10 @@ import (
 )
 
 // tenant validations
-func tenatFromctx(ctx context.Context) (uint, error) {
+func tenantFromCtx(ctx context.Context) (uint, error) {
 	tenantID, ok := ctx.Value(domain.TenantIDKey).(uint)
 	if !ok || tenantID == 0 {
-		return 0, errors.New("tenant not fund in context")
+		return 0, errors.New("tenant not found in context")
 	}
 	return tenantID, nil
 }
