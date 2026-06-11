@@ -1,0 +1,91 @@
+ curl -X POST http://localhost:8080/api/v1/auth/login \
+        -H "X-Tenant-ID: 1" \
+        -H "Content-Type: application/json" \
+        -d '{"email":"admin@crm.com","password":"admin123"}'
+
+
+
+# 1. Login (seed crea admin: admin@crm.com / admin123)
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@crm.com", "password": "admin123"}' | jq -r '.token'
+
+TOKEN="eyJhbGciOiJIUzI1NiIs..."
+
+# 2. Department
+curl -s -X POST http://localhost:8080/api/v1/departments \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E" -H "X-Tenant-ID: 1" \
+  -d '{"name": "Tecnología", "code": "TECH"}'
+
+# 3. Position (needs department_id de arriba)
+curl -s -X POST http://localhost:8080/api/v1/positions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E" -H "X-Tenant-ID: 1" \
+  -d '{"name": "Desarrollador", "department_id": 1, "description": "Dev Full Stack"}'
+
+# 4. User (employee, distinto del admin)
+curl -s -X POST http://localhost:8080/api/v1/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E" -H "X-Tenant-ID: 1" \
+  -d '{"first_name": "Juan","last_name": "Pérez","dni": "EMP-001","gender": "M","phone": "5551234567","email": "juan@example.com","birth_day": "1995-06-15","password": "123456"}'
+
+# 5. Employee (needs user_id=2, department_id=1, position_id=1)
+curl -s -X POST http://localhost:8080/api/v1/employees \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E" -H "X-Tenant-ID: 1" \
+  -d '{"user_id": 2, "department_id": 1, "position_id": 1}'
+
+# 6. EmployeeContract
+curl -s -X POST http://localhost:8080/api/v1/contracts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E" -H "X-Tenant-ID: 1" \
+  -d '{"employee_id": 1, "contract_type_id": 4, "base_salary": 150000000, "currency": "COP", "country_code": "CO", "start_date": "2026-06-01", "work_hours_per_day": 8, "work_days_per_week": 5}'
+
+# 7. Attendance
+curl -s -X POST http://localhost:8080/api/v1/attendance \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E" -H "X-Tenant-ID: 1" \
+  -d '{"employee_id": 1, "date": "2026-06-10", "check_in": "08:00", "check_out": "17:00"}'
+
+# 8. Overtime
+curl -s -X POST http://localhost:8080/api/v1/overtime \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E " -H "X-Tenant-ID: 1" \
+  -d '{"employee_id": 1, "date": "2026-06-10", "hours": 2, "reason": "Proyecto urgente"}'
+
+# 9. Payroll (calculate)
+curl -s -X POST http://localhost:8080/api/v1/payroll/calculate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E" -H "X-Tenant-ID: 1" \
+  -d '{"contract_id": 1, "period_start": "2026-06-01", "period_end": "2026-06-30"}'
+
+# 10. Role assign (opcional, admin ya tiene super_admin)
+curl -s -X POST http://localhost:8080/api/v1/roles/assign \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODEyMjQ3ODEsInJvbGVzIjpbInN1cGVyX2FkbWluIl0sInRlbmFudF9pZCI6MSwidXNlcl9pZCI6MX0.XmKUHgxJUOmyBJmgCn6UoztpQxGeoUZ-EiGHlnKLd4E" -H "X-Tenant-ID: 1" \
+  -d '{"user_id": 2, "role_name": "employee"}'
+
+# 1. Contract (base_salary en centavos: 150000000 = 1,500,000.00 COP)
+curl -s -X POST http://localhost:8080/api/v1/contracts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: 1" \
+  -d '{"employee_id": 1, "contract_type_id": 4, "base_salary": 150000000, "currency": "COP", "country_code": "CO", "start_date": "2026-06-01", "work_hours_per_day": 8, "work_days_per_week": 5}'
+
+# 2. Overtime (para que se auto-calcule en nómina)
+curl -s -X POST http://localhost:8080/api/v1/overtime \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: 1" \
+  -d '{"employee_id": 1, "date": "2026-06-15", "hours": 2, "reason": "Proyecto urgente"}'
+
+# 3. Payroll (con bonos y comisiones opcionales)
+curl -s -X POST http://localhost:8080/api/v1/payroll/calculate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: 1" \
+  -d '{
+    "contract_id": 1,
+    "period_start": "2026-06-01",
+    "period_end": "2026-06-30",
+    "bonuses": 20000000,
+    "commissions": 5000000
+  }'
