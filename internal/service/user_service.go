@@ -25,11 +25,11 @@ func (s *UserService) Create(ctx context.Context, usr *domain.User) error {
 	}
 	usr.Normalize()
 	if err := usr.ValidateAll(); err != nil {
-		return fmt.Errorf("Error checking existing user: %w ", err)
+		return fmt.Errorf("error checking existing user: %w", err)
 	}
 	existing, err := s.userRepo.GetByDNI(ctx, usr.Dni)
 	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
-		return fmt.Errorf("Error checking existing user: %w ", err)
+		return fmt.Errorf("error checking existing user: %w", err)
 	}
 	if existing != nil {
 		return domain.ErrDniAlreadyExist
@@ -82,7 +82,7 @@ func (s *UserService) Update(ctx context.Context, usr *domain.User) error {
 	}
 	existing, err = s.userRepo.GetByEmail(ctx, usr.Email)
 	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
-		return fmt.Errorf("error checking existing  email: %w", err)
+		return fmt.Errorf("error checking existing email: %w", err)
 	}
 	if existing != nil && existing.ID != usr.ID {
 		return domain.ErrEmailAlreadyExist

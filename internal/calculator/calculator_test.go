@@ -69,25 +69,25 @@ func TestMexicoCalculator_Calculate(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:  "MX",
 		MinWage:      8000,
-		HealthRate:   5.0,
-		PensionRate:  6.5,
+		HealthRate:   0.05,
+		PensionRate:  0.065,
 	}
 	periodStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.GrossSalary <= 0 {
-		t.Errorf("expected positive gross salary, got %f", result.GrossSalary)
+		t.Errorf("expected positive gross salary, got %d", result.GrossSalary)
 	}
 	if result.NetSalary <= 0 {
-		t.Errorf("expected positive net salary, got %f", result.NetSalary)
+		t.Errorf("expected positive net salary, got %d", result.NetSalary)
 	}
 	if result.NetSalary >= result.GrossSalary {
-		t.Errorf("net salary (%f) should be less than gross (%f)", result.NetSalary, result.GrossSalary)
+		t.Errorf("net salary (%d) should be less than gross (%d)", result.NetSalary, result.GrossSalary)
 	}
 }
 
@@ -100,19 +100,19 @@ func TestMexicoCalculator_BelowMinWage(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:  "MX",
 		MinWage:      8000,
-		HealthRate:   5.0,
-		PensionRate:  6.5,
+		HealthRate:   0.05,
+		PensionRate:  0.065,
 	}
 	periodStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.GrossSalary != 5000.0 {
-		t.Errorf("gross salary should be based on contract, not min wage, got %f", result.GrossSalary)
+		t.Errorf("gross salary should be based on contract, not min wage, got %d", result.GrossSalary)
 	}
 }
 
@@ -125,19 +125,19 @@ func TestMexicoCalculator_ExactlyMinWage(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:  "MX",
 		MinWage:      8000,
-		HealthRate:   5.0,
-		PensionRate:  6.5,
+		HealthRate:   0.05,
+		PensionRate:  0.065,
 	}
 	periodStart := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.GrossSalary <= 0 {
-		t.Errorf("expected positive gross salary, got %f", result.GrossSalary)
+		t.Errorf("expected positive gross salary, got %d", result.GrossSalary)
 	}
 }
 
@@ -150,26 +150,26 @@ func TestColombiaCalculator_Calculate(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:   "CO",
 		MinWage:       1000000,
-		HealthRate:    4.0,
-		PensionRate:   4.0,
+		HealthRate:   0.04,
+		PensionRate:  0.04,
 		TransportSubs: 162000,
 	}
 	periodStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.GrossSalary <= 0 {
-		t.Errorf("expected positive gross salary, got %f", result.GrossSalary)
+		t.Errorf("expected positive gross salary, got %d", result.GrossSalary)
 	}
 	if result.TransportAllowance <= 0 {
-		t.Errorf("expected transport allowance for salary <= 2x min wage, got %f", result.TransportAllowance)
+		t.Errorf("expected transport allowance for salary <= 2x min wage, got %d", result.TransportAllowance)
 	}
 	if result.NetSalary <= 0 {
-		t.Errorf("expected positive net salary, got %f", result.NetSalary)
+		t.Errorf("expected positive net salary, got %d", result.NetSalary)
 	}
 }
 
@@ -182,20 +182,20 @@ func TestColombiaCalculator_AboveTransportThreshold(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:   "CO",
 		MinWage:       1000000,
-		HealthRate:    4.0,
-		PensionRate:   4.0,
+		HealthRate:   0.04,
+		PensionRate:  0.04,
 		TransportSubs: 162000,
 	}
 	periodStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.TransportAllowance != 0 {
-		t.Errorf("expected no transport allowance for salary > 2x min wage, got %f", result.TransportAllowance)
+		t.Errorf("expected no transport allowance for salary > 2x min wage, got %d", result.TransportAllowance)
 	}
 }
 
@@ -208,21 +208,21 @@ func TestColombiaCalculator_WithHousingSubsidy(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:   "CO",
 		MinWage:       1000000,
-		HealthRate:    4.0,
-		PensionRate:   4.0,
+		HealthRate:   0.04,
+		PensionRate:  0.04,
 		TransportSubs: 162000,
 		HousingSubs:   120000,
 	}
 	periodStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.HousingAllowance <= 0 {
-		t.Errorf("expected housing allowance when HousingSubs > 0, got %f", result.HousingAllowance)
+		t.Errorf("expected housing allowance when HousingSubs > 0, got %d", result.HousingAllowance)
 	}
 }
 
@@ -235,20 +235,20 @@ func TestColombiaCalculator_BelowMinWage(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:   "CO",
 		MinWage:       1000000,
-		HealthRate:    4.0,
-		PensionRate:   4.0,
+		HealthRate:   0.04,
+		PensionRate:  0.04,
 		TransportSubs: 162000,
 	}
 	periodStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.GrossSalary != 500000.0 {
-		t.Errorf("gross salary should be based on contract salary, got %f", result.GrossSalary)
+		t.Errorf("gross salary should be based on contract salary, got %d", result.GrossSalary)
 	}
 }
 
@@ -261,20 +261,20 @@ func TestColombiaCalculator_TransportOnlyAboveMinWage(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:   "CO",
 		MinWage:       1000000,
-		HealthRate:    4.0,
-		PensionRate:   4.0,
+		HealthRate:   0.04,
+		PensionRate:  0.04,
 		TransportSubs: 162000,
 	}
 	periodStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.TransportAllowance <= 0 {
-		t.Errorf("expected transport allowance at exactly 1x min wage, got %f", result.TransportAllowance)
+		t.Errorf("expected transport allowance at exactly 1x min wage, got %d", result.TransportAllowance)
 	}
 }
 
@@ -287,20 +287,20 @@ func TestColombiaCalculator_AtTwoTimesMinWage(t *testing.T) {
 	params := &domain.CountryParam{
 		CountryCode:   "CO",
 		MinWage:       1000000,
-		HealthRate:    4.0,
-		PensionRate:   4.0,
+		HealthRate:   0.04,
+		PensionRate:  0.04,
 		TransportSubs: 162000,
 	}
 	periodStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	periodEnd := time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC)
 
-	result, err := c.Calculate(contract, params, periodStart, periodEnd)
+	result, err := c.Calculate(contract, params, periodStart, periodEnd, &PayrollInput{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.TransportAllowance <= 0 {
-		t.Errorf("expected transport allowance at exactly 2x min wage, got %f", result.TransportAllowance)
+		t.Errorf("expected transport allowance at exactly 2x min wage, got %d", result.TransportAllowance)
 	}
 }
 

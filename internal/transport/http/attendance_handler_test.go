@@ -161,6 +161,9 @@ func (m *mockEmpRepoForAtt) ListActive(_ context.Context, _, _ int) ([]domain.Em
 
 func (m *mockEmpRepoForAtt) Update(_ context.Context, _ *domain.Employee) error { return nil }
 func (m *mockEmpRepoForAtt) Delete(_ context.Context, _ uint) error             { return nil }
+func (m *mockEmpRepoForAtt) ListBySupervisor(_ context.Context, _ uint, _, _ int) ([]domain.Employee, int64, error) {
+	return nil, 0, nil
+}
 
 func TestAttendanceHandler_Create_Success(t *testing.T) {
 	attRepo := newMockAttendanceRepo()

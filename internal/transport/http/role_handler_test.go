@@ -9,6 +9,9 @@ import (
 	"testing"
 
 	"github.com/arrase21/crm/internal/domain"
+	"github.com/arrase21/crm/internal/repository"
+	"github.com/arrase21/crm/internal/service"
+	"github.com/arrase21/crm/internal/transport/middleware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -20,8 +23,13 @@ func setupRoleTest() (*gorm.DB, *gin.Engine) {
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+	router.Use(middleware.TenantMiddleware())
 
-	handler := NewRoleHandler(db)
+	roleRepo := repository.NewGormRoleRepository(db)
+	userRepo := repository.NewGormUserRepository(db)
+	roleSvc := service.NewRoleService(roleRepo, userRepo)
+
+	handler := NewRoleHandler(roleSvc, func(_, _ uint) {})
 	router.POST("/roles/assign", handler.Assign)
 	router.DELETE("/roles/assign", handler.Unassign)
 	router.GET("/roles", handler.ListRoles)
@@ -44,6 +52,7 @@ func TestRoleHandler_Assign_Success(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/roles/assign", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 	ctx := context.WithValue(req.Context(), domain.ClaimsKey, &domain.Claims{UserID: 1, TenantID: 1, Roles: []string{"super_admin"}})
 	req = req.WithContext(ctx)
 
@@ -60,6 +69,7 @@ func TestRoleHandler_Assign_InvalidJSON(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/roles/assign", bytes.NewBufferString("invalid"))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -69,7 +79,7 @@ func TestRoleHandler_Assign_InvalidJSON(t *testing.T) {
 	}
 }
 
-func TestRoleHandler_Assign_Unauthorized(t *testing.T) {
+func TestRoleHandler_Assign_NotFound(t *testing.T) {
 	_, router := setupRoleTest()
 
 	body := map[string]interface{}{
@@ -80,12 +90,13 @@ func TestRoleHandler_Assign_Unauthorized(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/roles/assign", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected status 401, got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected status 404, got %d", w.Code)
 	}
 }
 
@@ -102,6 +113,7 @@ func TestRoleHandler_Assign_UserNotFound(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/roles/assign", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 	ctx := context.WithValue(req.Context(), domain.ClaimsKey, &domain.Claims{UserID: 1, TenantID: 1, Roles: []string{"super_admin"}})
 	req = req.WithContext(ctx)
 
@@ -126,6 +138,7 @@ func TestRoleHandler_Assign_RoleNotFound(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/roles/assign", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 	ctx := context.WithValue(req.Context(), domain.ClaimsKey, &domain.Claims{UserID: 1, TenantID: 1, Roles: []string{"super_admin"}})
 	req = req.WithContext(ctx)
 
@@ -152,6 +165,7 @@ func TestRoleHandler_Unassign_Success(t *testing.T) {
 
 	req, _ := http.NewRequest("DELETE", "/roles/assign", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 	ctx := context.WithValue(req.Context(), domain.ClaimsKey, &domain.Claims{UserID: 1, TenantID: 1, Roles: []string{"super_admin"}})
 	req = req.WithContext(ctx)
 
@@ -177,6 +191,7 @@ func TestRoleHandler_Unassign_NotAssigned(t *testing.T) {
 
 	req, _ := http.NewRequest("DELETE", "/roles/assign", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 	ctx := context.WithValue(req.Context(), domain.ClaimsKey, &domain.Claims{UserID: 1, TenantID: 1, Roles: []string{"super_admin"}})
 	req = req.WithContext(ctx)
 
@@ -195,6 +210,7 @@ func TestRoleHandler_ListRoles(t *testing.T) {
 	db.Create(&domain.Role{ID: 2, Name: "employee", TenantID: 0})
 
 	req, _ := http.NewRequest("GET", "/roles", nil)
+	req.Header.Set("X-Tenant-ID", "1")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -218,6 +234,7 @@ func TestRoleHandler_UserRoles(t *testing.T) {
 	db.Create(&domain.UserRole{UserID: 1, RoleID: 1})
 
 	req, _ := http.NewRequest("GET", "/roles/me", nil)
+	req.Header.Set("X-Tenant-ID", "1")
 	ctx := context.WithValue(req.Context(), domain.ClaimsKey, &domain.Claims{UserID: 1, TenantID: 1, Roles: []string{"employee"}})
 	req = req.WithContext(ctx)
 
@@ -233,6 +250,7 @@ func TestRoleHandler_UserRoles_Unauthorized(t *testing.T) {
 	_, router := setupRoleTest()
 
 	req, _ := http.NewRequest("GET", "/roles/me", nil)
+	req.Header.Set("X-Tenant-ID", "1")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 

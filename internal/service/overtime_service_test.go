@@ -105,6 +105,10 @@ func (m *MockOvertimeRepo) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+func (m *MockOvertimeRepo) ListByEmployeeAndPeriod(ctx context.Context, employeeID uint, start, end time.Time) ([]domain.Overtime, error) {
+	return nil, nil
+}
+
 func TestOvertimeService_Create(t *testing.T) {
 	t.Run("create valid - success", func(t *testing.T) {
 		mockOT := NewMockOvertimeRepo()

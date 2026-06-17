@@ -30,7 +30,7 @@ func (r *GormRoleRepo) GetByName(ctx context.Context, name string) (*domain.Role
 
 func (r *GormRoleRepo) List(ctx context.Context) ([]domain.Role, error) {
 	var roles []domain.Role
-	err := r.db.WithContext(ctx).Preload("Permissions").Find(&roles).Error
+	err := r.db.WithContext(ctx).Find(&roles).Error
 	return roles, err
 }
 

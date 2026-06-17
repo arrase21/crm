@@ -354,7 +354,7 @@ func TestEmployeeContractService_Create(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockContract, mockEmp, mockCT, mockCP, mockPR := tt.setupMocks()
-			svc := NewEmployeeContractService(mockContract, mockEmp, mockCT, mockCP, mockPR)
+			svc := NewEmployeeContractService(mockContract, mockEmp, mockCT, mockCP, mockPR, NewMockOvertimeRepo())
 			ctx := context.Background()
 
 			err := svc.Create(ctx, tt.input)
@@ -379,7 +379,7 @@ func TestEmployeeContractService_GetByID(t *testing.T) {
 	mockContract := NewMockEmployeeContractRepo()
 	mockContract.contracts[1] = &domain.EmployeeContract{ID: 1, EmployeeID: 1}
 
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
 	ctx := context.Background()
 
 	t.Run("get existing - success", func(t *testing.T) {
@@ -409,7 +409,7 @@ func TestEmployeeContractService_GetByID(t *testing.T) {
 
 func TestEmployeeContractService_GetByEmployeeID(t *testing.T) {
 	mockContract := NewMockEmployeeContractRepo()
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
 	ctx := context.Background()
 
 	t.Run("get by employee id 0 - error", func(t *testing.T) {
@@ -426,7 +426,7 @@ func TestEmployeeContractService_List(t *testing.T) {
 		mockContract.contracts[uint(i)] = &domain.EmployeeContract{ID: uint(i), EmployeeID: uint(i)}
 	}
 
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
 	ctx := context.Background()
 
 	contracts, total, err := svc.List(ctx, 1, 10)
@@ -445,7 +445,7 @@ func TestEmployeeContractService_Update(t *testing.T) {
 	mockContract := NewMockEmployeeContractRepo()
 	mockContract.contracts[1] = &domain.EmployeeContract{ID: 1, EmployeeID: 1}
 
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
 	ctx := context.Background()
 
 	t.Run("update with nil - should fail", func(t *testing.T) {
@@ -481,7 +481,7 @@ func TestEmployeeContractService_Delete(t *testing.T) {
 	mockContract := NewMockEmployeeContractRepo()
 	mockContract.contracts[1] = &domain.EmployeeContract{ID: 1, EmployeeID: 1}
 
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
 	ctx := context.Background()
 
 	t.Run("delete existing - success", func(t *testing.T) {
@@ -511,7 +511,7 @@ func TestEmployeeContractService_Delete(t *testing.T) {
 
 func TestEmployeeContractService_GetPayrollRecords(t *testing.T) {
 	mockPR := NewMockPayrollRecordRepo()
-	svc := NewEmployeeContractService(NewMockEmployeeContractRepo(), NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), mockPR)
+	svc := NewEmployeeContractService(NewMockEmployeeContractRepo(), NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), mockPR, NewMockOvertimeRepo())
 	ctx := context.Background()
 
 	_, _, err := svc.GetPayrollRecords(ctx, 1, 1, 10)

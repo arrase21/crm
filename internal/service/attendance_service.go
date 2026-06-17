@@ -112,11 +112,13 @@ func (s *AttendanceService) checkSupervisorScope(ctx context.Context, targetEmpl
 }
 
 func hasAnyRole(roles []string, targets ...string) bool {
+	targetSet := make(map[string]struct{}, len(targets))
+	for _, t := range targets {
+		targetSet[t] = struct{}{}
+	}
 	for _, r := range roles {
-		for _, t := range targets {
-			if r == t {
-				return true
-			}
+		if _, ok := targetSet[r]; ok {
+			return true
 		}
 	}
 	return false

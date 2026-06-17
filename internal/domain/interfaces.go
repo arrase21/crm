@@ -37,7 +37,7 @@ type PositionRepo interface {
 	GetByIDWithDepartment(ctx context.Context, id uint) (*Position, error)
 	GetByName(ctx context.Context, name string) (*Position, error)
 	List(ctx context.Context, page, limit int) ([]Position, int64, error)
-	ListByDepartment(ctx context.Context, departmentID uint) ([]Position, int64, error)
+	ListByDepartment(ctx context.Context, departmentID uint, page, limit int) ([]Position, int64, error)
 	CountByDepartment(ctx context.Context, departmentID uint) (int64, error)
 	Update(ctx context.Context, pstn *Position) error
 	Delete(ctx context.Context, id uint) error

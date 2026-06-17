@@ -3,14 +3,16 @@ package repository
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/arrase21/crm/internal/cache"
 	"github.com/arrase21/crm/internal/domain"
 )
 
 func TestCountryParamRepo_Create(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.CountryParam{})
-	repo := NewGormCountryParamRepository(db)
+	repo := NewGormCountryParamRepository(db, cache.New(5*time.Minute))
 	ctx := context.Background()
 
 	tests := []struct {
@@ -52,7 +54,7 @@ func TestCountryParamRepo_Create(t *testing.T) {
 func TestCountryParamRepo_GetByID(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.CountryParam{})
-	repo := NewGormCountryParamRepository(db)
+	repo := NewGormCountryParamRepository(db, cache.New(5*time.Minute))
 	ctx := context.Background()
 
 	cp := &domain.CountryParam{
@@ -89,7 +91,7 @@ func TestCountryParamRepo_GetByID(t *testing.T) {
 func TestCountryParamRepo_GetByCountryCode(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.CountryParam{})
-	repo := NewGormCountryParamRepository(db)
+	repo := NewGormCountryParamRepository(db, cache.New(5*time.Minute))
 	ctx := context.Background()
 
 	repo.Create(ctx, &domain.CountryParam{
@@ -125,7 +127,7 @@ func TestCountryParamRepo_GetByCountryCode(t *testing.T) {
 func TestCountryParamRepo_List(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.CountryParam{})
-	repo := NewGormCountryParamRepository(db)
+	repo := NewGormCountryParamRepository(db, cache.New(5*time.Minute))
 	ctx := context.Background()
 
 	codes := []string{"MX", "CO", "BR"}
@@ -152,7 +154,7 @@ func TestCountryParamRepo_List(t *testing.T) {
 func TestCountryParamRepo_Update(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.CountryParam{})
-	repo := NewGormCountryParamRepository(db)
+	repo := NewGormCountryParamRepository(db, cache.New(5*time.Minute))
 	ctx := context.Background()
 
 	cp := &domain.CountryParam{
@@ -181,7 +183,7 @@ func TestCountryParamRepo_Update(t *testing.T) {
 func TestCountryParamRepo_Delete(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.CountryParam{})
-	repo := NewGormCountryParamRepository(db)
+	repo := NewGormCountryParamRepository(db, cache.New(5*time.Minute))
 	ctx := context.Background()
 
 	cp := &domain.CountryParam{

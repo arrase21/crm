@@ -127,6 +127,10 @@ func (m *mockEmpRepo) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+func (m *mockEmpRepo) ListBySupervisor(_ context.Context, _ uint, _, _ int) ([]domain.Employee, int64, error) {
+	return nil, 0, nil
+}
+
 type mockUserRepoForEmp struct {
 	getByIDErr error
 	user       *domain.User
@@ -179,7 +183,7 @@ func (m *mockPosRepoForEmp) GetByID(_ context.Context, _ uint) (*domain.Position
 func (m *mockPosRepoForEmp) GetByIDWithDepartment(_ context.Context, _ uint) (*domain.Position, error) { return nil, domain.ErrPositionNotFound }
 func (m *mockPosRepoForEmp) GetByName(_ context.Context, _ string) (*domain.Position, error)           { return nil, domain.ErrPositionNotFound }
 func (m *mockPosRepoForEmp) List(_ context.Context, _, _ int) ([]domain.Position, int64, error)         { return nil, 0, nil }
-func (m *mockPosRepoForEmp) ListByDepartment(_ context.Context, _ uint) ([]domain.Position, int64, error) { return nil, 0, nil }
+func (m *mockPosRepoForEmp) ListByDepartment(_ context.Context, _ uint, _, _ int) ([]domain.Position, int64, error) { return nil, 0, nil }
 func (m *mockPosRepoForEmp) CountByDepartment(_ context.Context, _ uint) (int64, error)                { return 0, nil }
 func (m *mockPosRepoForEmp) Update(_ context.Context, _ *domain.Position) error                        { return nil }
 func (m *mockPosRepoForEmp) Delete(_ context.Context, _ uint) error                                    { return nil }

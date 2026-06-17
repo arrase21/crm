@@ -46,7 +46,7 @@ func (h *OvertimeHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.svc.Create(c.Request.Context(), o); err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -54,7 +54,11 @@ func (h *OvertimeHandler) Create(c *gin.Context) {
 }
 
 func (h *OvertimeHandler) GetByID(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 	o, err := h.svc.GetByID(c.Request.Context(), uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "overtime not found"})
@@ -129,7 +133,7 @@ func (h *OvertimeHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.svc.Update(c.Request.Context(), existing); err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -137,7 +141,11 @@ func (h *OvertimeHandler) Update(c *gin.Context) {
 }
 
 func (h *OvertimeHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 	if err := h.svc.Delete(c.Request.Context(), uint(id)); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return

@@ -9,29 +9,36 @@ import (
 	"testing"
 
 	"github.com/arrase21/crm/internal/domain"
+	"github.com/arrase21/crm/internal/repository"
 	"github.com/arrase21/crm/internal/service"
+	"github.com/arrase21/crm/internal/transport/middleware"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-func setupAuthTest(t *testing.T) (*service.AuthService, *gin.Engine) {
-	os.Setenv("JWT_SECRET", "test-secret-key")
+func setupAuthTest(t *testing.T) (*service.AuthService, *gorm.DB, *gin.Engine) {
+	t.Helper()
+	os.Setenv("JWT_SECRET", "test-secret")
+
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
-		t.Fatalf("failed to connect to db: %v", err)
+		t.Fatal(err)
 	}
-	db.AutoMigrate(&domain.User{})
+	db.AutoMigrate(&domain.User{}, &domain.Role{}, &domain.UserRole{})
+	userRepo := repository.NewGormUserRepository(db)
+	roleRepo := repository.NewGormRoleRepository(db)
 
-	svc := service.NewAuthService(db)
+	svc := service.NewAuthService(userRepo, roleRepo)
 	handler := NewAuthHandler(svc)
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+	router.Use(middleware.TenantMiddleware())
 	router.POST("/auth/login", handler.Login)
 
-	return svc, router
+	return svc, db, router
 }
 
 func createLoginUser(db *gorm.DB) {
@@ -49,10 +56,10 @@ func createLoginUser(db *gorm.DB) {
 }
 
 func TestAuthHandler_Login_Success(t *testing.T) {
-	svc, router := setupAuthTest(t)
+	_, db, router := setupAuthTest(t)
 	defer os.Unsetenv("JWT_SECRET")
 
-	createLoginUser(svc.GetDB())
+	createLoginUser(db)
 
 	body := map[string]interface{}{
 		"email":    "test@example.com",
@@ -62,6 +69,7 @@ func TestAuthHandler_Login_Success(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -80,10 +88,10 @@ func TestAuthHandler_Login_Success(t *testing.T) {
 }
 
 func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
-	svc, router := setupAuthTest(t)
+	_, db, router := setupAuthTest(t)
 	defer os.Unsetenv("JWT_SECRET")
 
-	createLoginUser(svc.GetDB())
+	createLoginUser(db)
 
 	body := map[string]interface{}{
 		"email":    "test@example.com",
@@ -93,6 +101,7 @@ func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -103,7 +112,7 @@ func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
 }
 
 func TestAuthHandler_Login_UserNotFound(t *testing.T) {
-	_, router := setupAuthTest(t)
+	_, _, router := setupAuthTest(t)
 	defer os.Unsetenv("JWT_SECRET")
 
 	body := map[string]interface{}{
@@ -114,6 +123,7 @@ func TestAuthHandler_Login_UserNotFound(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -124,11 +134,12 @@ func TestAuthHandler_Login_UserNotFound(t *testing.T) {
 }
 
 func TestAuthHandler_Login_InvalidJSON(t *testing.T) {
-	_, router := setupAuthTest(t)
+	_, _, router := setupAuthTest(t)
 	defer os.Unsetenv("JWT_SECRET")
 
 	req, _ := http.NewRequest("POST", "/auth/login", bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "1")
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)

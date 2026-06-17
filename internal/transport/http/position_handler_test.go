@@ -34,7 +34,7 @@ func (m *MockPositionService) GetByIDWithDepartment(ctx context.Context, id uint
 	return m.GetByID(ctx, id)
 }
 
-func (m *MockPositionService) ListByDepartment(ctx context.Context, deptID uint) ([]domain.Position, int64, error) {
+func (m *MockPositionService) ListByDepartment(ctx context.Context, deptID uint, page, limit int) ([]domain.Position, int64, error) {
 	var result []domain.Position
 	for _, p := range m.positions {
 		if p.DepartmentID == deptID {

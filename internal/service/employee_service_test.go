@@ -155,6 +155,10 @@ func (m *MockEmployeeRepo) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+func (m *MockEmployeeRepo) ListBySupervisor(ctx context.Context, supervisorEmployeeID uint, page, limit int) ([]domain.Employee, int64, error) {
+	return nil, 0, nil
+}
+
 func validEmployee() *domain.Employee {
 	return &domain.Employee{
 		UserID:       1,

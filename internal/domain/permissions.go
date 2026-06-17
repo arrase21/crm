@@ -3,27 +3,27 @@ package domain
 import "time"
 
 type Role struct {
-	ID        uint      `gorm:"primaryKey"`
-	TenantID  uint      `gorm:"not null;index"`
-	Name      string    `gorm:"size:50;not null;uniqueIndex:idx_role_name"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	TenantID  uint      `gorm:"not null;index" json:"tenant_id"`
+	Name      string    `gorm:"size:50;not null;uniqueIndex:idx_role_name" json:"name"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
 
 type Permission struct {
-	ID       uint   `gorm:"primaryKey"`
-	Resource string `gorm:"size:50;not null;uniqueIndex:idx_perm_resource_action,composite:resource_action"`
-	Action   string `gorm:"size:50;not null;uniqueIndex:idx_perm_resource_action,composite:resource_action"`
-	Label    string `gorm:"size:100"`
+	ID       uint   `gorm:"primaryKey" json:"id"`
+	Resource string `gorm:"size:50;not null;uniqueIndex:idx_perm_resource_action" json:"resource"`
+	Action   string `gorm:"size:50;not null;uniqueIndex:idx_perm_resource_action" json:"action"`
+	Label    string `gorm:"size:100" json:"label"`
 }
 
 type RolePermission struct {
-	RoleID       uint `gorm:"primaryKey"`
-	PermissionID uint `gorm:"primaryKey"`
+	RoleID       uint `gorm:"primaryKey" json:"role_id"`
+	PermissionID uint `gorm:"primaryKey" json:"permission_id"`
 }
 
 type UserRole struct {
-	UserID uint `gorm:"primaryKey"`
-	RoleID uint `gorm:"primaryKey"`
+	UserID uint `gorm:"primaryKey" json:"user_id"`
+	RoleID uint `gorm:"primaryKey" json:"role_id"`
 }
 
 var Permissions = []Permission{

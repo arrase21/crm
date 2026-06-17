@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/arrase21/crm/internal/domain"
 	"github.com/arrase21/crm/internal/service"
@@ -91,6 +92,10 @@ func (m *mockOvertimeRepo) List(_ context.Context, _, _ int) ([]domain.Overtime,
 	return all, int64(len(all)), nil
 }
 
+func (m *mockOvertimeRepo) ListByEmployeeAndPeriod(_ context.Context, _ uint, _, _ time.Time) ([]domain.Overtime, error) {
+	return nil, nil
+}
+
 func (m *mockOvertimeRepo) Update(_ context.Context, o *domain.Overtime) error {
 	if m.updateErr != nil {
 		return m.updateErr
@@ -161,6 +166,9 @@ func (m *mockEmpRepoForOvertime) ListActive(_ context.Context, _, _ int) ([]doma
 
 func (m *mockEmpRepoForOvertime) Update(_ context.Context, _ *domain.Employee) error { return nil }
 func (m *mockEmpRepoForOvertime) Delete(_ context.Context, _ uint) error             { return nil }
+func (m *mockEmpRepoForOvertime) ListBySupervisor(_ context.Context, _ uint, _, _ int) ([]domain.Employee, int64, error) {
+	return nil, 0, nil
+}
 
 func TestOvertimeHandler_Create_Success(t *testing.T) {
 	otRepo := newMockOvertimeRepo()

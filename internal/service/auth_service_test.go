@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/arrase21/crm/internal/domain"
+	"github.com/arrase21/crm/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -17,10 +18,16 @@ func setupAuthTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("failed to connect to test db: %v", err)
 	}
-	if err := db.AutoMigrate(&domain.User{}); err != nil {
+	if err := db.AutoMigrate(&domain.User{}, &domain.Role{}, &domain.UserRole{}); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 	return db
+}
+
+func newAuthService(db *gorm.DB) *AuthService {
+	userRepo := repository.NewGormUserRepository(db)
+	roleRepo := repository.NewGormRoleRepository(db)
+	return NewAuthService(userRepo, roleRepo)
 }
 
 func createTestUser(db *gorm.DB, email, password string) {
@@ -42,8 +49,8 @@ func TestAuthService_Login_Success(t *testing.T) {
 	db := setupAuthTestDB(t)
 	createTestUser(db, "test@example.com", "secret123")
 
-	svc := NewAuthService(db)
-	ctx := context.Background()
+	svc := newAuthService(db)
+	ctx := context.WithValue(context.Background(), domain.TenantIDKey, uint(1))
 
 	resp, err := svc.Login(ctx, domain.LoginRequest{
 		Email:    "test@example.com",
@@ -67,8 +74,8 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 	db := setupAuthTestDB(t)
 	createTestUser(db, "test@example.com", "secret123")
 
-	svc := NewAuthService(db)
-	ctx := context.Background()
+	svc := newAuthService(db)
+	ctx := context.WithValue(context.Background(), domain.TenantIDKey, uint(1))
 
 	_, err := svc.Login(ctx, domain.LoginRequest{
 		Email:    "test@example.com",
@@ -81,7 +88,7 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 
 func TestAuthService_Login_UserNotFound(t *testing.T) {
 	db := setupAuthTestDB(t)
-	svc := NewAuthService(db)
+	svc := newAuthService(db)
 	ctx := context.Background()
 
 	_, err := svc.Login(ctx, domain.LoginRequest{
@@ -98,9 +105,9 @@ func TestAuthService_GenerateAndValidateToken(t *testing.T) {
 	defer os.Unsetenv("JWT_SECRET")
 
 	db := setupAuthTestDB(t)
-	svc := NewAuthService(db)
+	svc := newAuthService(db)
 
-	token, err := svc.GenerateToken(1, 1, []string{"admin"})
+	token, err := svc.generateToken(1, 1, []string{"admin"})
 	if err != nil {
 		t.Fatalf("expected no error generating token, got %v", err)
 	}
@@ -125,7 +132,7 @@ func TestAuthService_ValidateToken_Invalid(t *testing.T) {
 	defer os.Unsetenv("JWT_SECRET")
 
 	db := setupAuthTestDB(t)
-	svc := NewAuthService(db)
+	svc := newAuthService(db)
 
 	_, err := svc.ValidateToken("invalid-token")
 	if err == nil {
@@ -135,7 +142,7 @@ func TestAuthService_ValidateToken_Invalid(t *testing.T) {
 
 func TestAuthService_ValidateToken_Empty(t *testing.T) {
 	db := setupAuthTestDB(t)
-	svc := NewAuthService(db)
+	svc := newAuthService(db)
 
 	_, err := svc.ValidateToken("")
 	if err == nil {

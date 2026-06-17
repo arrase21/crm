@@ -20,7 +20,7 @@ func NewDepartmentHandler(svc *service.DepartmentService) *DepartmentHandler {
 
 type CreateDepartmentRequest struct {
 	Name     string `json:"name" binding:"required,max=100"`
-	Code     string `json:"code" binding:"required,max=100"`
+	Code     string `json:"code" binding:"required,max=20"`
 	IsActive *bool  `json:"is_active"`
 }
 
@@ -45,7 +45,7 @@ func (h *DepartmentHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "department create"})
+	c.JSON(http.StatusCreated, gin.H{"message": "department created"})
 }
 
 func (h *DepartmentHandler) GetByID(c *gin.Context) {
@@ -149,7 +149,7 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 	existingDept, err := h.svc.GetByID(c.Request.Context(), uint(id))
 	if err != nil {
 		if errors.Is(err, domain.ErrDepartmentNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "department  not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "department not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -180,7 +180,7 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "department updated"})

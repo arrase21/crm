@@ -59,9 +59,11 @@ func (r *GormAttendanceRepo) ListByEmployee(ctx context.Context, employeeID uint
 	var records []domain.Attendance
 	var total int64
 
-	r.db.WithContext(ctx).Model(&domain.Attendance{}).
+	if err := r.db.WithContext(ctx).Model(&domain.Attendance{}).
 		Where("tenant_id = ? AND employee_id = ?", tenantID, employeeID).
-		Count(&total)
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	err = r.db.WithContext(ctx).
 		Preload("Employee.User").
@@ -87,10 +89,12 @@ func (r *GormAttendanceRepo) ListByDepartment(ctx context.Context, departmentID 
 	var records []domain.Attendance
 	var total int64
 
-	r.db.WithContext(ctx).Model(&domain.Attendance{}).
+	if err := r.db.WithContext(ctx).Model(&domain.Attendance{}).
 		Joins("JOIN employees ON employees.id = attendances.employee_id").
 		Where("attendances.tenant_id = ? AND employees.department_id = ?", tenantID, departmentID).
-		Count(&total)
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	err = r.db.WithContext(ctx).
 		Preload("Employee.User").
@@ -117,9 +121,11 @@ func (r *GormAttendanceRepo) List(ctx context.Context, page, limit int) ([]domai
 	var records []domain.Attendance
 	var total int64
 
-	r.db.WithContext(ctx).Model(&domain.Attendance{}).
+	if err := r.db.WithContext(ctx).Model(&domain.Attendance{}).
 		Where("tenant_id = ?", tenantID).
-		Count(&total)
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	err = r.db.WithContext(ctx).
 		Preload("Employee.User").

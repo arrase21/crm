@@ -1,28 +1,33 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"testing"
 
 	"github.com/arrase21/crm/internal/domain"
+	"github.com/arrase21/crm/internal/repository"
 	"github.com/arrase21/crm/internal/service"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-func setupAuthMiddlewareTest(t *testing.T) *service.AuthService {
+func setupAuthMiddlewareTest(t *testing.T) (*service.AuthService, *gorm.DB) {
 	os.Setenv("JWT_SECRET", "test-secret-key")
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to connect to db: %v", err)
 	}
-	db.AutoMigrate(&domain.User{})
-	return service.NewAuthService(db)
+	db.AutoMigrate(&domain.User{}, &domain.Role{}, &domain.UserRole{})
+	userRepo := repository.NewGormUserRepository(db)
+	roleRepo := repository.NewGormRoleRepository(db)
+	return service.NewAuthService(userRepo, roleRepo), db
 }
 
 func TestAuthMiddleware_MissingHeader(t *testing.T) {
-	svc := setupAuthMiddlewareTest(t)
+	svc, _ := setupAuthMiddlewareTest(t)
 	defer os.Unsetenv("JWT_SECRET")
 
 	c, w := setupGin()
@@ -38,7 +43,7 @@ func TestAuthMiddleware_MissingHeader(t *testing.T) {
 }
 
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
-	svc := setupAuthMiddlewareTest(t)
+	svc, _ := setupAuthMiddlewareTest(t)
 	defer os.Unsetenv("JWT_SECRET")
 
 	c, w := setupGin()
@@ -56,7 +61,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 }
 
 func TestAuthMiddleware_WithoutBearerPrefix(t *testing.T) {
-	svc := setupAuthMiddlewareTest(t)
+	svc, _ := setupAuthMiddlewareTest(t)
 	defer os.Unsetenv("JWT_SECRET")
 
 	c, w := setupGin()
@@ -74,10 +79,10 @@ func TestAuthMiddleware_WithoutBearerPrefix(t *testing.T) {
 }
 
 func TestAuthMiddleware_Success(t *testing.T) {
-	svc := setupAuthMiddlewareTest(t)
+	svc, db := setupAuthMiddlewareTest(t)
 	defer os.Unsetenv("JWT_SECRET")
 
-	token, err := generateTestToken(svc)
+	token, err := generateTestToken(svc, db)
 	if err != nil {
 		t.Fatalf("failed to generate token: %v", err)
 	}
@@ -105,6 +110,29 @@ func TestAuthMiddleware_Success(t *testing.T) {
 	}
 }
 
-func generateTestToken(svc *service.AuthService) (string, error) {
-	return svc.GenerateToken(1, 1, []string{"admin"})
+func generateTestToken(svc *service.AuthService, db *gorm.DB) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte("test123"), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	db.Create(&domain.User{
+		TenantID:     1,
+		FirstName:    "Test",
+		LastName:     "User",
+		Dni:          "12345678",
+		Gender:       "M",
+		Phone:        "1234567890",
+		Email:        "test@example.com",
+		PasswordHash: string(hash),
+	})
+
+	ctx := context.WithValue(context.Background(), domain.TenantIDKey, uint(1))
+	resp, err := svc.Login(ctx, domain.LoginRequest{
+		Email:    "test@example.com",
+		Password: "test123",
+	})
+	if err != nil {
+		return "", err
+	}
+	return resp.Token, nil
 }

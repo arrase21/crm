@@ -3,14 +3,20 @@ package repository
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/arrase21/crm/internal/cache"
 	"github.com/arrase21/crm/internal/domain"
 )
+
+func cacheForTest() *cache.Cache {
+	return cache.New(5 * time.Minute)
+}
 
 func TestContractTypeRepo_Create(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.ContractType{})
-	repo := NewGormContractTypeRepository(db)
+	repo := NewGormContractTypeRepository(db, cacheForTest())
 	ctx := context.Background()
 
 	tests := []struct {
@@ -50,7 +56,7 @@ func TestContractTypeRepo_Create(t *testing.T) {
 func TestContractTypeRepo_GetByID(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.ContractType{})
-	repo := NewGormContractTypeRepository(db)
+	repo := NewGormContractTypeRepository(db, cacheForTest())
 	ctx := context.Background()
 
 	ct := &domain.ContractType{
@@ -100,7 +106,7 @@ func TestContractTypeRepo_GetByID(t *testing.T) {
 func TestContractTypeRepo_GetByCountry(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.ContractType{})
-	repo := NewGormContractTypeRepository(db)
+	repo := NewGormContractTypeRepository(db, cacheForTest())
 	ctx := context.Background()
 
 	repo.Create(ctx, &domain.ContractType{Name: "Full Time", CountryCode: "MX", IsActive: true})
@@ -151,7 +157,7 @@ func TestContractTypeRepo_GetByCountry(t *testing.T) {
 func TestContractTypeRepo_List(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.ContractType{})
-	repo := NewGormContractTypeRepository(db)
+	repo := NewGormContractTypeRepository(db, cacheForTest())
 	ctx := context.Background()
 
 	for i := 1; i <= 5; i++ {
@@ -189,7 +195,7 @@ func TestContractTypeRepo_List(t *testing.T) {
 func TestContractTypeRepo_Update(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.ContractType{})
-	repo := NewGormContractTypeRepository(db)
+	repo := NewGormContractTypeRepository(db, cacheForTest())
 	ctx := context.Background()
 
 	ct := &domain.ContractType{Name: "Full Time", CountryCode: "MX", IsActive: true}
@@ -232,7 +238,7 @@ func TestContractTypeRepo_Update(t *testing.T) {
 func TestContractTypeRepo_Delete(t *testing.T) {
 	db := setupTestDB(t)
 	db.AutoMigrate(&domain.ContractType{})
-	repo := NewGormContractTypeRepository(db)
+	repo := NewGormContractTypeRepository(db, cacheForTest())
 	ctx := context.Background()
 
 	ct := &domain.ContractType{Name: "Full Time", CountryCode: "MX", IsActive: true}

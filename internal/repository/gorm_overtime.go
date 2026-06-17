@@ -60,9 +60,11 @@ func (r *GormOvertimeRepo) ListByEmployee(ctx context.Context, employeeID uint, 
 	var records []domain.Overtime
 	var total int64
 
-	r.db.WithContext(ctx).Model(&domain.Overtime{}).
+	if err := r.db.WithContext(ctx).Model(&domain.Overtime{}).
 		Where("tenant_id = ? AND employee_id = ?", tenantID, employeeID).
-		Count(&total)
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	err = r.db.WithContext(ctx).
 		Preload("Employee.User").
@@ -100,10 +102,12 @@ func (r *GormOvertimeRepo) ListByDepartment(ctx context.Context, departmentID ui
 	var records []domain.Overtime
 	var total int64
 
-	r.db.WithContext(ctx).Model(&domain.Overtime{}).
+	if err := r.db.WithContext(ctx).Model(&domain.Overtime{}).
 		Joins("JOIN employees ON employees.id = overtimes.employee_id").
 		Where("overtimes.tenant_id = ? AND employees.department_id = ?", tenantID, departmentID).
-		Count(&total)
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	err = r.db.WithContext(ctx).
 		Preload("Employee.User").
@@ -130,9 +134,11 @@ func (r *GormOvertimeRepo) List(ctx context.Context, page, limit int) ([]domain.
 	var records []domain.Overtime
 	var total int64
 
-	r.db.WithContext(ctx).Model(&domain.Overtime{}).
+	if err := r.db.WithContext(ctx).Model(&domain.Overtime{}).
 		Where("tenant_id = ?", tenantID).
-		Count(&total)
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	err = r.db.WithContext(ctx).
 		Preload("Employee.User").

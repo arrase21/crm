@@ -135,7 +135,11 @@ func (p *Position) ValidateAll() error {
 	return nil
 }
 
-func (e *Employee) Normalize() {}
+func (e *Employee) Normalize() {
+	if e.SupervisorID != nil && *e.SupervisorID == 0 {
+		e.SupervisorID = nil
+	}
+}
 
 func (e *Employee) Required() error {
 	if e.UserID == 0 {

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/arrase21/crm/internal/domain"
@@ -9,11 +10,15 @@ import (
 )
 
 type RoleHandler struct {
-	svc *service.RoleService
+	svc              *service.RoleService
+	invalidatePerms func(uint, uint)
 }
 
-func NewRoleHandler(svc *service.RoleService) *RoleHandler {
-	return &RoleHandler{svc: svc}
+func NewRoleHandler(svc *service.RoleService, invalidatePerms func(uint, uint)) *RoleHandler {
+	return &RoleHandler{
+		svc:              svc,
+		invalidatePerms: invalidatePerms,
+	}
 }
 
 type AssignRoleRequest struct {
@@ -29,10 +34,21 @@ func (h *RoleHandler) Assign(c *gin.Context) {
 	}
 
 	if err := h.svc.Assign(c.Request.Context(), req.UserID, req.RoleName); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case err.Error() == "role not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
+	claims, ok := c.Request.Context().Value(domain.ClaimsKey).(*domain.Claims)
+	if ok {
+		h.invalidatePerms(claims.TenantID, req.UserID)
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "role assigned"})
 }
 
@@ -44,10 +60,23 @@ func (h *RoleHandler) Unassign(c *gin.Context) {
 	}
 
 	if err := h.svc.Unassign(c.Request.Context(), req.UserID, req.RoleName); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case err.Error() == "role not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case err.Error() == "role not assigned to user":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
+	claims, ok := c.Request.Context().Value(domain.ClaimsKey).(*domain.Claims)
+	if ok {
+		h.invalidatePerms(claims.TenantID, req.UserID)
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "role unassigned"})
 }
 

@@ -454,7 +454,7 @@ func TestGormPositionRepo_ListByDepartment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			positions, total, err := repo.ListByDepartment(ctx, tt.departmentID)
+			positions, total, err := repo.ListByDepartment(ctx, tt.departmentID, 1, 10)
 			if tt.wantErr && err == nil {
 				t.Error("expected error but got nil")
 			}

@@ -109,7 +109,7 @@ func (m *MockPositionRepo) List(ctx context.Context, page, limit int) ([]domain.
 	return result[offset:end], total, nil
 }
 
-func (m *MockPositionRepo) ListByDepartment(ctx context.Context, departmentID uint) ([]domain.Position, int64, error) {
+func (m *MockPositionRepo) ListByDepartment(ctx context.Context, departmentID uint, page, limit int) ([]domain.Position, int64, error) {
 	if departmentID == 0 {
 		return nil, 0, errors.New("department id is required")
 	}
@@ -476,7 +476,7 @@ func TestPositionService_ListByDepartment_Success(t *testing.T) {
 		DepartmentID: 2,
 	})
 
-	positions, total, err := svc.ListByDepartment(ctx, 1)
+	positions, total, err := svc.ListByDepartment(ctx, 1, 1, 10)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -493,7 +493,7 @@ func TestPositionService_ListByDepartment_InvalidID(t *testing.T) {
 	svc := NewPositionService(mock)
 	ctx := context.Background()
 
-	_, _, err := svc.ListByDepartment(ctx, 0)
+	_, _, err := svc.ListByDepartment(ctx, 0, 1, 10)
 	if err == nil {
 		t.Fatal("expected error for invalid department id")
 	}

@@ -17,8 +17,9 @@ import (
 var errAlreadySetup = errors.New("the system is already set up")
 
 func seedPermissionsAndRoles(db *gorm.DB) {
-	for _, p := range domain.Permissions {
-		db.Where("resource = ? AND action = ?", p.Resource, p.Action).FirstOrCreate(&p)
+	for i := range domain.Permissions {
+		p := &domain.Permissions[i]
+		db.Where("resource = ? AND action = ?", p.Resource, p.Action).FirstOrCreate(p)
 	}
 
 	roles := []struct {

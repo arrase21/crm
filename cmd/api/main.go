@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/arrase21/crm/internal/cache"
 	"github.com/arrase21/crm/internal/repository"
 	"github.com/arrase21/crm/internal/service"
 	httptransport "github.com/arrase21/crm/internal/transport/http"
@@ -62,6 +63,9 @@ func main() {
 	}
 	slog.Info("connected to database")
 
+	countryCache := cache.New(10 * time.Minute)
+	contractTypeCache := cache.New(10 * time.Minute)
+
 	m := gormigrate.New(db, gormigrate.DefaultOptions, getMigrations())
 	if err := m.Migrate(); err != nil {
 		slog.Error("migration failed", "error", err)
@@ -91,8 +95,8 @@ func main() {
 	empSvc := service.NewEmployeeService(empRepo, userRepo, deptRepo, pstnRepo)
 	empHandler := httptransport.NewEmployeeHandler(empSvc)
 
-	ctRepo := repository.NewGormContractTypeRepository(db)
-	countryRepo := repository.NewGormCountryParamRepository(db)
+	ctRepo := repository.NewGormContractTypeRepository(db, contractTypeCache)
+	countryRepo := repository.NewGormCountryParamRepository(db, countryCache)
 	contractRepo := repository.NewGormEmployeeContractRepository(db)
 	payrollRepo := repository.NewGormPayrollRecordRepository(db)
 	otRepo := repository.NewGormOvertimeRepository(db)
@@ -110,8 +114,9 @@ func main() {
 	authSvc := service.NewAuthService(userRepo, roleRepo)
 	authHandler := httptransport.NewAuthHandler(authSvc)
 	roleSvc := service.NewRoleService(roleRepo, userRepo)
-	roleHandler := httptransport.NewRoleHandler(roleSvc)
 
+	permMiddleware := middleware.NewPermissionMiddleware(db)
+	roleHandler := httptransport.NewRoleHandler(roleSvc, permMiddleware.InvalidateUser)
 	ginMode := getEnv("GIN_MODE", "release")
 	gin.SetMode(ginMode)
 	router := gin.New()
@@ -119,6 +124,7 @@ func main() {
 	router.Use(gin.Recovery())
 
 	rl := middleware.NewRateLimiter(rate.Limit(100), 200, 10*time.Minute)
+	defer rl.Shutdown()
 	router.Use(rl.Middleware())
 
 	router.GET("/health", func(c *gin.Context) {
@@ -134,10 +140,9 @@ func main() {
 	})
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
+		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Tenant-ID"},
-		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
@@ -155,76 +160,77 @@ func main() {
 	{
 		roles := protected.Group("/roles")
 		{
-			roles.POST("/assign", middleware.RequirePermission(db, "roles", "assign"), roleHandler.Assign)
-			roles.DELETE("/assign", middleware.RequirePermission(db, "roles", "assign"), roleHandler.Unassign)
+			// roles.POST("/assign", middleware.RequirePermission(db, "roles", "assign"), roleHandler.Assign)
+			roles.POST("/assign", permMiddleware.RequirePermission("roles", "assign"), roleHandler.Assign)
+			roles.DELETE("/assign", permMiddleware.RequirePermission("roles", "assign"), roleHandler.Unassign)
 			roles.GET("", roleHandler.ListRoles)
 			roles.GET("/me", roleHandler.UserRoles)
 		}
 		users := protected.Group("/users")
 		{
-			users.POST("", middleware.RequirePermission(db, "users", "create"), userHandler.Create)
-			users.GET("/:id", middleware.RequirePermission(db, "users", "read"), userHandler.GetByID)
-			users.GET("", middleware.RequirePermission(db, "users", "read"), userHandler.GetByDni)
-			users.GET("/list", middleware.RequirePermission(db, "users", "read"), userHandler.List)
-			users.PUT("/:id", middleware.RequirePermission(db, "users", "update"), userHandler.Update)
-			users.DELETE("/:id", middleware.RequirePermission(db, "users", "delete"), userHandler.Delete)
+			users.POST("", permMiddleware.RequirePermission("users", "create"), userHandler.Create)
+			users.GET("/:id", permMiddleware.RequirePermission("users", "read"), userHandler.GetByID)
+			users.GET("", permMiddleware.RequirePermission("users", "read"), userHandler.GetByDni)
+			users.GET("/list", permMiddleware.RequirePermission("users", "read"), userHandler.List)
+			users.PUT("/:id", permMiddleware.RequirePermission("users", "update"), userHandler.Update)
+			users.DELETE("/:id", permMiddleware.RequirePermission("users", "delete"), userHandler.Delete)
 		}
 		departments := protected.Group("/departments")
 		{
-			departments.POST("", middleware.RequirePermission(db, "departments", "create"), deptHandler.Create)
-			departments.GET("/:id", middleware.RequirePermission(db, "departments", "read"), deptHandler.GetByID)
-			departments.GET("", middleware.RequirePermission(db, "departments", "read"), deptHandler.GetByCode)
-			departments.GET("/list", middleware.RequirePermission(db, "departments", "read"), deptHandler.List)
-			departments.PUT("/:id", middleware.RequirePermission(db, "departments", "update"), deptHandler.Update)
-			departments.DELETE("/:id", middleware.RequirePermission(db, "departments", "delete"), deptHandler.Delete)
+			departments.POST("", permMiddleware.RequirePermission("departments", "create"), deptHandler.Create)
+			departments.GET("/:id", permMiddleware.RequirePermission("departments", "read"), deptHandler.GetByID)
+			departments.GET("", permMiddleware.RequirePermission("departments", "read"), deptHandler.GetByCode)
+			departments.GET("/list", permMiddleware.RequirePermission("departments", "read"), deptHandler.List)
+			departments.PUT("/:id", permMiddleware.RequirePermission("departments", "update"), deptHandler.Update)
+			departments.DELETE("/:id", permMiddleware.RequirePermission("departments", "delete"), deptHandler.Delete)
 		}
 		positions := protected.Group("/positions")
 		{
-			positions.POST("", middleware.RequirePermission(db, "positions", "create"), pstnHandler.Create)
-			positions.GET("/:id", middleware.RequirePermission(db, "positions", "read"), pstnHandler.GetByID)
-			positions.GET("/search", middleware.RequirePermission(db, "positions", "read"), pstnHandler.GetByName)
-			positions.GET("/list", middleware.RequirePermission(db, "positions", "read"), pstnHandler.List)
-			positions.PUT("/:id", middleware.RequirePermission(db, "positions", "update"), pstnHandler.Update)
-			positions.DELETE("/:id", middleware.RequirePermission(db, "positions", "delete"), pstnHandler.Delete)
+			positions.POST("", permMiddleware.RequirePermission("positions", "create"), pstnHandler.Create)
+			positions.GET("/:id", permMiddleware.RequirePermission("positions", "read"), pstnHandler.GetByID)
+			positions.GET("/search", permMiddleware.RequirePermission("positions", "read"), pstnHandler.GetByName)
+			positions.GET("/list", permMiddleware.RequirePermission("positions", "read"), pstnHandler.List)
+			positions.PUT("/:id", permMiddleware.RequirePermission("positions", "update"), pstnHandler.Update)
+			positions.DELETE("/:id", permMiddleware.RequirePermission("positions", "delete"), pstnHandler.Delete)
 		}
 		employees := protected.Group("/employees")
 		{
-			employees.POST("", middleware.RequirePermission(db, "employees", "create"), empHandler.Create)
-			employees.GET("/:id", middleware.RequirePermission(db, "employees", "read"), empHandler.GetByID)
-			employees.GET("", middleware.RequirePermission(db, "employees", "read"), empHandler.GetByUserID)
-			employees.GET("/list", middleware.RequirePermission(db, "employees", "read"), empHandler.List)
-			employees.PUT("/:id", middleware.RequirePermission(db, "employees", "update"), empHandler.Update)
-			employees.DELETE("/:id", middleware.RequirePermission(db, "employees", "delete"), empHandler.Delete)
+			employees.POST("", permMiddleware.RequirePermission("employees", "create"), empHandler.Create)
+			employees.GET("/:id", permMiddleware.RequirePermission("employees", "read"), empHandler.GetByID)
+			employees.GET("", permMiddleware.RequirePermission("employees", "read"), empHandler.GetByUserID)
+			employees.GET("/list", permMiddleware.RequirePermission("employees", "read"), empHandler.List)
+			employees.PUT("/:id", permMiddleware.RequirePermission("employees", "update"), empHandler.Update)
+			employees.DELETE("/:id", permMiddleware.RequirePermission("employees", "delete"), empHandler.Delete)
 		}
 		contracts := protected.Group("/contracts")
 		{
-			contracts.POST("", middleware.RequirePermission(db, "contracts", "create"), contractHandler.Create)
-			contracts.GET("/:id", middleware.RequirePermission(db, "contracts", "read"), contractHandler.GetByID)
-			contracts.GET("", middleware.RequirePermission(db, "contracts", "read"), contractHandler.GetByEmployeeID)
-			contracts.GET("/list", middleware.RequirePermission(db, "contracts", "read"), contractHandler.List)
-			contracts.PUT("/:id", middleware.RequirePermission(db, "contracts", "update"), contractHandler.Update)
-			contracts.DELETE("/:id", middleware.RequirePermission(db, "contracts", "delete"), contractHandler.Delete)
+			contracts.POST("", permMiddleware.RequirePermission("contracts", "create"), contractHandler.Create)
+			contracts.GET("/:id", permMiddleware.RequirePermission("contracts", "read"), contractHandler.GetByID)
+			contracts.GET("", permMiddleware.RequirePermission("contracts", "read"), contractHandler.GetByEmployeeID)
+			contracts.GET("/list", permMiddleware.RequirePermission("contracts", "read"), contractHandler.List)
+			contracts.PUT("/:id", permMiddleware.RequirePermission("contracts", "update"), contractHandler.Update)
+			contracts.DELETE("/:id", permMiddleware.RequirePermission("contracts", "delete"), contractHandler.Delete)
 		}
 		payroll := protected.Group("/payroll")
 		{
-			payroll.POST("/calculate", middleware.RequirePermission(db, "payroll", "calculate"), contractHandler.CalculatePayroll)
-			payroll.GET("/records", middleware.RequirePermission(db, "payroll", "read"), contractHandler.GetPayrollRecords)
+			payroll.POST("/calculate", permMiddleware.RequirePermission("payroll", "calculate"), contractHandler.CalculatePayroll)
+			payroll.GET("/records", permMiddleware.RequirePermission("payroll", "read"), contractHandler.GetPayrollRecords)
 		}
 		attendance := protected.Group("/attendance")
 		{
-			attendance.POST("", middleware.RequirePermission(db, "attendance", "create"), attHandler.Create)
-			attendance.GET("/:id", middleware.RequirePermission(db, "attendance", "read"), attHandler.GetByID)
-			attendance.GET("", middleware.RequirePermission(db, "attendance", "read"), attHandler.List)
-			attendance.PUT("/:id", middleware.RequirePermission(db, "attendance", "update"), attHandler.Update)
-			attendance.DELETE("/:id", middleware.RequirePermission(db, "attendance", "delete"), attHandler.Delete)
+			attendance.POST("", permMiddleware.RequirePermission("attendance", "create"), attHandler.Create)
+			attendance.GET("/:id", permMiddleware.RequirePermission("attendance", "read"), attHandler.GetByID)
+			attendance.GET("", permMiddleware.RequirePermission("attendance", "read"), attHandler.List)
+			attendance.PUT("/:id", permMiddleware.RequirePermission("attendance", "update"), attHandler.Update)
+			attendance.DELETE("/:id", permMiddleware.RequirePermission("attendance", "delete"), attHandler.Delete)
 		}
 		overtime := protected.Group("/overtime")
 		{
-			overtime.POST("", middleware.RequirePermission(db, "overtime", "create"), otHandler.Create)
-			overtime.GET("/:id", middleware.RequirePermission(db, "overtime", "read"), otHandler.GetByID)
-			overtime.GET("", middleware.RequirePermission(db, "overtime", "read"), otHandler.List)
-			overtime.PUT("/:id", middleware.RequirePermission(db, "overtime", "update"), otHandler.Update)
-			overtime.DELETE("/:id", middleware.RequirePermission(db, "overtime", "delete"), otHandler.Delete)
+			overtime.POST("", permMiddleware.RequirePermission("overtime", "create"), otHandler.Create)
+			overtime.GET("/:id", permMiddleware.RequirePermission("overtime", "read"), otHandler.GetByID)
+			overtime.GET("", permMiddleware.RequirePermission("overtime", "read"), otHandler.List)
+			overtime.PUT("/:id", permMiddleware.RequirePermission("overtime", "update"), otHandler.Update)
+			overtime.DELETE("/:id", permMiddleware.RequirePermission("overtime", "delete"), otHandler.Delete)
 		}
 	}
 
