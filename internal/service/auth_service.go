@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -75,8 +76,11 @@ func (s *AuthService) ValidateToken(tokenStr string) (*domain.Claims, error) {
 	}
 
 	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
 		return []byte(secret), nil
-	})
+	}, jwt.WithValidMethods([]string{"HS256"}))
 	if err != nil || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
@@ -86,14 +90,23 @@ func (s *AuthService) ValidateToken(tokenStr string) (*domain.Claims, error) {
 		return nil, errors.New("invalid claims")
 	}
 
-	userID := uint(claims["user_id"].(float64))
-	tenantID := uint(claims["tenant_id"].(float64))
-	roles := toStringSlice(claims["roles"].([]interface{}))
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return nil, errors.New("invalid user_id claim")
+	}
+	tenantIDFloat, ok := claims["tenant_id"].(float64)
+	if !ok {
+		return nil, errors.New("invalid tenant_id claim")
+	}
+	rolesRaw, ok := claims["roles"].([]interface{})
+	if !ok {
+		return nil, errors.New("invalid roles claim")
+	}
 
 	return &domain.Claims{
-		UserID:   userID,
-		TenantID: tenantID,
-		Roles:    roles,
+		UserID:   uint(userIDFloat),
+		TenantID: uint(tenantIDFloat),
+		Roles:    toStringSlice(rolesRaw),
 	}, nil
 }
 

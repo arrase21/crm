@@ -111,7 +111,7 @@ func (h *PositionHandler) List(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid department_id"})
 			return
 		}
-		positions, total, err = h.svc.ListByDepartment(c.Request.Context(), uint(departmentID))
+		positions, total, err = h.svc.ListByDepartment(c.Request.Context(), uint(departmentID), page, limit)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

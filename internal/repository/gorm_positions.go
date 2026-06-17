@@ -100,7 +100,7 @@ func (r *GormPositionRepo) GetByName(ctx context.Context, name string) (*domain.
 	return &pstn, nil
 }
 
-func (r *GormPositionRepo) ListByDepartment(ctx context.Context, departmentID uint) ([]domain.Position, int64, error) {
+func (r *GormPositionRepo) ListByDepartment(ctx context.Context, departmentID uint, page, limit int) ([]domain.Position, int64, error) {
 	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {
 		return nil, 0, err
@@ -108,6 +108,13 @@ func (r *GormPositionRepo) ListByDepartment(ctx context.Context, departmentID ui
 	if departmentID == 0 {
 		return nil, 0, errors.New("department id is required")
 	}
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
 
 	var positions []domain.Position
 	var total int64
@@ -121,6 +128,8 @@ func (r *GormPositionRepo) ListByDepartment(ctx context.Context, departmentID ui
 	if err := r.db.WithContext(ctx).
 		Where("tenant_id = ? AND department_id = ?", tenantID, departmentID).
 		Order("id DESC").
+		Offset(offset).
+		Limit(limit).
 		Find(&positions).Error; err != nil {
 		return nil, 0, err
 	}

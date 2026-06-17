@@ -4,21 +4,29 @@ import (
 	"context"
 	"errors"
 
+	"github.com/arrase21/crm/internal/cache"
 	"github.com/arrase21/crm/internal/domain"
 	"gorm.io/gorm"
 )
 
 type GormCountryParamRepo struct {
-	db *gorm.DB
+	db    *gorm.DB
+	cache *cache.Cache
 }
 
-func NewGormCountryParamRepository(db *gorm.DB) domain.CountryParamRepo {
-	return &GormCountryParamRepo{db: db}
+func NewGormCountryParamRepository(db *gorm.DB, c *cache.Cache) domain.CountryParamRepo {
+	return &GormCountryParamRepo{
+		db:    db,
+		cache: c,
+	}
 }
 
 func (r *GormCountryParamRepo) Create(ctx context.Context, cp *domain.CountryParam) error {
 	if cp == nil {
 		return errors.New("country param cannot be nil")
+	}
+	if r.cache != nil {
+		r.cache.Del("country_param:" + cp.CountryCode)
 	}
 	return r.db.WithContext(ctx).Create(cp).Error
 }
@@ -42,6 +50,11 @@ func (r *GormCountryParamRepo) GetByCountryCode(ctx context.Context, countryCode
 	if countryCode == "" {
 		return nil, errors.New("country code is required")
 	}
+	if r.cache != nil {
+		if v, ok := r.cache.Get("country_param:" + countryCode); ok {
+			return v.(*domain.CountryParam), nil
+		}
+	}
 	var cp domain.CountryParam
 	err := r.db.WithContext(ctx).Where("country_code = ?", countryCode).First(&cp).Error
 	if err != nil {
@@ -49,6 +62,9 @@ func (r *GormCountryParamRepo) GetByCountryCode(ctx context.Context, countryCode
 			return nil, domain.ErrCountryParamNotFound
 		}
 		return nil, err
+	}
+	if r.cache != nil {
+		r.cache.Set("country_param:"+countryCode, &cp)
 	}
 	return &cp, nil
 }
@@ -83,6 +99,9 @@ func (r *GormCountryParamRepo) Update(ctx context.Context, cp *domain.CountryPar
 	if cp == nil || cp.ID == 0 {
 		return errors.New("country param cannot be nil or have zero id")
 	}
+	if r.cache != nil {
+		r.cache.Del("country_param:" + cp.CountryCode)
+	}
 	return r.db.WithContext(ctx).Save(cp).Error
 }
 
@@ -90,12 +109,19 @@ func (r *GormCountryParamRepo) Delete(ctx context.Context, id uint) error {
 	if id == 0 {
 		return errors.New("invalid country param id")
 	}
+	var old domain.CountryParam
+	if err := r.db.WithContext(ctx).First(&old, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.ErrCountryParamNotFound
+		}
+		return err
+	}
 	result := r.db.WithContext(ctx).Delete(&domain.CountryParam{}, id)
 	if result.Error != nil {
 		return result.Error
 	}
-	if result.RowsAffected == 0 {
-		return domain.ErrCountryParamNotFound
+	if r.cache != nil {
+		r.cache.Del("country_param:" + old.CountryCode)
 	}
 	return nil
 }

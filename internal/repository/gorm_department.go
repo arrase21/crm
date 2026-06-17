@@ -135,7 +135,7 @@ func (r *GormDepartmentRepo) List(ctx context.Context, page, limit int) ([]domai
 
 func (r *GormDepartmentRepo) Update(ctx context.Context, dept *domain.Department) error {
 	if dept == nil || dept.ID == 0 {
-		return errors.New("user cannot be nil or have zero")
+		return errors.New("department cannot be nil or have zero id")
 	}
 	tenantID, err := tenantFromCtx(ctx)
 	if err != nil {

@@ -101,7 +101,7 @@ func (s *DepartmentService) Update(ctx context.Context, dept *domain.Department)
 
 func (s *DepartmentService) Delete(ctx context.Context, id uint) error {
 	if id == 0 {
-		return errors.New("error department id canno be nil or zero")
+		return errors.New("department id cannot be nil or zero")
 	}
 
 	// Check if there are positions associated with this department (only if positionRepo is provided)

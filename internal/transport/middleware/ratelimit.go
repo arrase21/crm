@@ -20,6 +20,7 @@ type RateLimiter struct {
 	rate     rate.Limit
 	burst    int
 	cleanup  time.Duration
+	stopCh   chan struct{}
 }
 
 func NewRateLimiter(r rate.Limit, burst int, cleanup time.Duration) *RateLimiter {
@@ -28,21 +29,32 @@ func NewRateLimiter(r rate.Limit, burst int, cleanup time.Duration) *RateLimiter
 		rate:    r,
 		burst:   burst,
 		cleanup: cleanup,
+		stopCh:  make(chan struct{}),
 	}
 	go rl.cleanupLoop()
 	return rl
 }
 
+func (rl *RateLimiter) Shutdown() {
+	close(rl.stopCh)
+}
+
 func (rl *RateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(rl.cleanup)
+	defer ticker.Stop()
 	for {
-		time.Sleep(rl.cleanup)
-		rl.mu.Lock()
-		for ip, l := range rl.clients {
-			if time.Since(l.lastSeen) > rl.cleanup {
-				delete(rl.clients, ip)
+		select {
+		case <-rl.stopCh:
+			return
+		case <-ticker.C:
+			rl.mu.Lock()
+			for ip, l := range rl.clients {
+				if time.Since(l.lastSeen) > rl.cleanup {
+					delete(rl.clients, ip)
+				}
 			}
+			rl.mu.Unlock()
 		}
-		rl.mu.Unlock()
 	}
 }
 

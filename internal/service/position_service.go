@@ -81,11 +81,11 @@ func (s *PositionService) List(ctx context.Context, page, limit int) ([]domain.P
 	return s.positionRepo.List(ctx, page, limit)
 }
 
-func (s *PositionService) ListByDepartment(ctx context.Context, departmentID uint) ([]domain.Position, int64, error) {
+func (s *PositionService) ListByDepartment(ctx context.Context, departmentID uint, page, limit int) ([]domain.Position, int64, error) {
 	if departmentID == 0 {
 		return nil, 0, errors.New("department id is required")
 	}
-	return s.positionRepo.ListByDepartment(ctx, departmentID)
+	return s.positionRepo.ListByDepartment(ctx, departmentID, page, limit)
 }
 
 func (s *PositionService) CountByDepartment(ctx context.Context, departmentID uint) (int64, error) {
