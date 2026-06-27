@@ -29,6 +29,9 @@ var (
 	ErrCountryParamNotFound      = errors.New("country params not found")
 	ErrCountryParamAlreadyExists = errors.New("country params already exist for this country")
 
+	ErrAttendanceNotFound = errors.New("attendance not found")
+	ErrOvertimeNotFound   = errors.New("overtime not found")
+
 	ErrPayrollRecordNotFound = errors.New("payroll record not found")
 
 	ErrInvalidCountryCode = errors.New("invalid country code")

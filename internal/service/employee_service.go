@@ -59,6 +59,15 @@ func (s *EmployeeService) Create(ctx context.Context, emp *domain.Employee) erro
 			return fmt.Errorf("error validating position: %w", err)
 		}
 	}
+	if emp.SupervisorID != nil && *emp.SupervisorID != 0 {
+		_, err := s.employeeRepo.GetByID(ctx, *emp.SupervisorID)
+		if err != nil {
+			if errors.Is(err, domain.ErrEmployeeNotFound) {
+				return domain.ErrEmployeeNotFound
+			}
+			return fmt.Errorf("error validating supervisor: %w", err)
+		}
+	}
 	existing, err := s.employeeRepo.GetByUserID(ctx, emp.UserID)
 	if err != nil && !errors.Is(err, domain.ErrEmployeeNotFound) {
 		return fmt.Errorf("error checking existing employee: %w", err)
@@ -115,6 +124,15 @@ func (s *EmployeeService) Update(ctx context.Context, emp *domain.Employee) erro
 				return domain.ErrPositionNotFound
 			}
 			return fmt.Errorf("error validating position: %w", err)
+		}
+	}
+	if emp.SupervisorID != nil && *emp.SupervisorID != 0 {
+		_, err := s.employeeRepo.GetByID(ctx, *emp.SupervisorID)
+		if err != nil {
+			if errors.Is(err, domain.ErrEmployeeNotFound) {
+				return domain.ErrEmployeeNotFound
+			}
+			return fmt.Errorf("error validating supervisor: %w", err)
 		}
 	}
 	existing, err := s.employeeRepo.GetByUserID(ctx, emp.UserID)

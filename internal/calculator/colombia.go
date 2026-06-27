@@ -90,5 +90,5 @@ func (c *ColombiaCalculator) Calculate(contract *domain.EmployeeContract, params
 }
 
 func daysBetween(start, end time.Time) float64 {
-	return end.Sub(start).Hours() / 24
+	return math.Round(end.Sub(start).Hours() / 24)
 }

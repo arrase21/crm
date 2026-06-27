@@ -105,7 +105,7 @@ func (s *AttendanceService) checkSupervisorScope(ctx context.Context, targetEmpl
 	}
 
 	if targetEmp.DepartmentID != supervisorEmp.DepartmentID {
-		return errors.New("solo puedes registrar attendance de empleados de tu misma área")
+		return errors.New("you can only register attendance for employees in your own area")
 	}
 
 	return nil

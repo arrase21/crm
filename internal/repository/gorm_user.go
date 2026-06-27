@@ -168,11 +168,13 @@ func (r *GormUserRepo) Update(ctx context.Context, usr *domain.User) error {
 		"dni":        usr.Dni,
 		"phone":      usr.Phone,
 		"email":      usr.Email,
+		"gender":     usr.Gender,
+		"birth_day":  usr.BirthDay,
 	}
 
 	err = r.db.WithContext(ctx).Model(&domain.User{}).
 		Where("id = ? AND tenant_id = ?", usr.ID, tenantID).
-		Select("first_name", "last_name", "dni", "phone", "email").
+		Select("first_name", "last_name", "dni", "phone", "email", "gender", "birth_day").
 		Updates(updates).Error
 
 	if err != nil {

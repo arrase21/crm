@@ -111,7 +111,11 @@ type UpdateOvertimeRequest struct {
 }
 
 func (h *OvertimeHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 
 	existing, err := h.svc.GetByID(c.Request.Context(), uint(id))
 	if err != nil {

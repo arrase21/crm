@@ -29,7 +29,7 @@ func (r *GormEmployeeRepo) Create(ctx context.Context, emp *domain.Employee) err
 	emp.TenantID = tenantID
 	err = r.db.WithContext(ctx).Create(emp).Error
 	if err != nil {
-		return err // validar si es nuevo o tiene info duplicada
+		return err
 	}
 	return nil
 }
@@ -180,8 +180,15 @@ func (r *GormEmployeeRepo) Update(ctx context.Context, emp *domain.Employee) err
 	if err != nil {
 		return err
 	}
-	emp.TenantID = tenantID
-	err = r.db.WithContext(ctx).Save(emp).Error
+	existing, err := r.GetByID(ctx, emp.ID)
+	if err != nil {
+		return err
+	}
+	emp.TenantID = existing.TenantID
+	err = r.db.WithContext(ctx).Model(&domain.Employee{}).
+		Where("id = ? AND tenant_id = ?", emp.ID, tenantID).
+		Select("*").
+		Updates(emp).Error
 	if err != nil {
 		return err
 	}

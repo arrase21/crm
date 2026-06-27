@@ -8,7 +8,7 @@ import (
 
 func (u *User) Validate() error {
 	if u.Gender != "M" && u.Gender != "F" {
-		return errors.New("Invalid option")
+		return errors.New("invalid gender")
 	}
 	if u.BirthDay.IsZero() || u.BirthDay.After(time.Now()) {
 		return errors.New("invalid birthday")
@@ -71,7 +71,6 @@ func (d *Department) Normalize() {
 }
 func (d *Department) Required() error {
 	d.Normalize()
-
 	if d.Name == "" {
 		return errors.New("name is required")
 	}
@@ -107,7 +106,6 @@ func (p *Position) Normalize() {
 
 func (p *Position) Required() error {
 	p.Normalize()
-
 	if p.Name == "" {
 		return errors.New("name is required")
 	}
@@ -159,6 +157,7 @@ func (e *Employee) Validate() error {
 }
 
 func (e *Employee) ValidateAll() error {
+	e.Normalize()
 	if err := e.Required(); err != nil {
 		return err
 	}
@@ -176,7 +175,6 @@ func (ct *ContractType) Normalize() {
 
 func (ct *ContractType) Required() error {
 	ct.Normalize()
-
 	if ct.Name == "" {
 		return errors.New("name is required")
 	}
@@ -213,8 +211,6 @@ func (ec *EmployeeContract) Normalize() {
 }
 
 func (ec *EmployeeContract) Required() error {
-	ec.Normalize()
-
 	if ec.EmployeeID == 0 {
 		return errors.New("employee is required")
 	}
@@ -270,8 +266,6 @@ func (cp *CountryParam) Normalize() {
 }
 
 func (cp *CountryParam) Required() error {
-	cp.Normalize()
-
 	if cp.CountryCode == "" {
 		return errors.New("country code is required")
 	}

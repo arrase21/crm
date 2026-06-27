@@ -37,7 +37,7 @@ func (r *GormAttendanceRepo) GetByID(ctx context.Context, id uint) (*domain.Atte
 		First(&a).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("attendance not found")
+			return nil, domain.ErrAttendanceNotFound
 		}
 		return nil, err
 	}
