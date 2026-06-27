@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"github.com/arrase21/crm/internal/domain"
@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func getMigrations() []*gormigrate.Migration {
+func GetMigrations() []*gormigrate.Migration {
 	return []*gormigrate.Migration{
 		{
 			ID: "20260610-initial",

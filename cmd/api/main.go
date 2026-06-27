@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/arrase21/crm/internal/cache"
+	"github.com/arrase21/crm/internal/database"
 	"github.com/arrase21/crm/internal/repository"
 	"github.com/arrase21/crm/internal/service"
 	httptransport "github.com/arrase21/crm/internal/transport/http"
@@ -66,18 +67,18 @@ func main() {
 	countryCache := cache.New(10 * time.Minute)
 	contractTypeCache := cache.New(10 * time.Minute)
 
-	m := gormigrate.New(db, gormigrate.DefaultOptions, getMigrations())
+	m := gormigrate.New(db, gormigrate.DefaultOptions, database.GetMigrations())
 	if err := m.Migrate(); err != nil {
 		slog.Error("migration failed", "error", err)
 		os.Exit(1)
 	}
 	slog.Info("migrations completed")
 
-	seedPermissionsAndRoles(db)
+	database.SeedPermissionsAndRoles(db)
 
 	seedEnabled := getEnv("SEED_ENABLED", "true")
 	if seedEnabled == "true" {
-		seedMasterData(db)
+		database.SeedMasterData(db)
 	}
 
 	userRepo := repository.NewGormUserRepository(db)
@@ -137,6 +138,11 @@ func main() {
 
 	router.GET("/ready", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	})
+
+	router.Use(func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20)
+		c.Next()
 	})
 
 	router.Use(cors.New(cors.Config{
@@ -217,6 +223,7 @@ func main() {
 			payroll.GET("/records", permMiddleware.RequirePermission("payroll", "read"), contractHandler.GetPayrollRecords)
 		}
 		attendance := protected.Group("/attendance")
+		attendance.Use(middleware.ScopeSupervisor(db))
 		{
 			attendance.POST("", permMiddleware.RequirePermission("attendance", "create"), attHandler.Create)
 			attendance.GET("/:id", permMiddleware.RequirePermission("attendance", "read"), attHandler.GetByID)
@@ -225,6 +232,7 @@ func main() {
 			attendance.DELETE("/:id", permMiddleware.RequirePermission("attendance", "delete"), attHandler.Delete)
 		}
 		overtime := protected.Group("/overtime")
+		overtime.Use(middleware.ScopeSupervisor(db))
 		{
 			overtime.POST("", permMiddleware.RequirePermission("overtime", "create"), otHandler.Create)
 			overtime.GET("/:id", permMiddleware.RequirePermission("overtime", "read"), otHandler.GetByID)
@@ -263,6 +271,9 @@ func main() {
 		slog.Error("server forced shutdown", "error", err)
 		os.Exit(1)
 	}
+
+	countryCache.Shutdown()
+	contractTypeCache.Shutdown()
 
 	if err := sqlDB.Close(); err != nil {
 		slog.Error("database connection close error", "error", err)

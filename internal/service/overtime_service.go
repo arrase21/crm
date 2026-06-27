@@ -105,7 +105,7 @@ func (s *OvertimeService) checkSupervisorScope(ctx context.Context, targetEmploy
 	}
 
 	if targetEmp.DepartmentID != supervisorEmp.DepartmentID {
-		return errors.New("solo puedes registrar horas extras de empleados de tu misma área")
+		return errors.New("you can only register overtime for employees in your own area")
 	}
 
 	return nil

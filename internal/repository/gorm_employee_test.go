@@ -295,11 +295,11 @@ func TestGormEmployeeRepo_Update(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "update non-existing - should succeed (upsert)",
+			name: "update non-existing - should fail",
 			input: &domain.Employee{
 				ID: 999,
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

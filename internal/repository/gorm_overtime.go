@@ -38,7 +38,7 @@ func (r *GormOvertimeRepo) GetByID(ctx context.Context, id uint) (*domain.Overti
 		First(&o).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("overtime not found")
+			return nil, domain.ErrOvertimeNotFound
 		}
 		return nil, err
 	}

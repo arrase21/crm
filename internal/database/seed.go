@@ -1,22 +1,18 @@
-package main
+package database
 
 import (
-	"errors"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/arrase21/crm/internal/domain"
-	"github.com/arrase21/crm/internal/service"
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-var errAlreadySetup = errors.New("the system is already set up")
+var ErrAlreadySetup = "the system is already set up"
 
-func seedPermissionsAndRoles(db *gorm.DB) {
+func SeedPermissionsAndRoles(db *gorm.DB) {
 	for i := range domain.Permissions {
 		p := &domain.Permissions[i]
 		db.Where("resource = ? AND action = ?", p.Resource, p.Action).FirstOrCreate(p)
@@ -84,17 +80,16 @@ func seedPermissionsAndRoles(db *gorm.DB) {
 	}
 }
 
-func assignSuperAdminUser(db *gorm.DB, userID uint) error {
+func AssignSuperAdminUser(db *gorm.DB, userID uint) error {
 	var role domain.Role
 	if err := db.Where("name = ?", "super_admin").First(&role).Error; err != nil {
 		return err
 	}
-
 	return db.Where("user_id = ? AND role_id = ?", userID, role.ID).
 		FirstOrCreate(&domain.UserRole{UserID: userID, RoleID: role.ID}).Error
 }
 
-func seedMasterData(db *gorm.DB) {
+func SeedMasterData(db *gorm.DB) {
 	adminEmail := os.Getenv("ADMIN_EMAIL")
 	if adminEmail == "" {
 		adminEmail = "admin@crm.com"
@@ -126,7 +121,7 @@ func seedMasterData(db *gorm.DB) {
 		}
 		if err := db.Create(&admin).Error; err != nil {
 			log.Printf("Warning: could not create admin user: %v", err)
-		} else if err := assignSuperAdminUser(db, admin.ID); err != nil {
+		} else if err := AssignSuperAdminUser(db, admin.ID); err != nil {
 			log.Printf("Warning: could not assign super admin role: %v", err)
 		} else {
 			log.Printf("Admin user created: %s", adminEmail)
@@ -154,7 +149,7 @@ func seedMasterData(db *gorm.DB) {
 		{
 			CountryCode: "CO", Name: "Colombia", Currency: "COP",
 			MinWage: 130000000, HealthRate: 0.04, PensionRate: 0.04,
-			TransportSubs: 16200000, HousingSubs: 0,
+			TransportSubs: 20000000, HousingSubs: 0,
 		},
 	}
 	for _, c := range countries {
@@ -162,50 +157,4 @@ func seedMasterData(db *gorm.DB) {
 	}
 
 	log.Println("Master data seeded successfully")
-}
-
-type setupRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=4"`
-}
-
-func newSetupHandler(db *gorm.DB, userSvc *service.UserService) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var count int64
-		db.Model(&domain.User{}).Where("tenant_id = 1").Count(&count)
-		if count > 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": errAlreadySetup.Error()})
-			return
-		}
-
-		var req setupRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		admin := &domain.User{
-			TenantID:  1,
-			FirstName: "Admin",
-			LastName:  "System",
-			Dni:       "ADMIN-001",
-			Gender:    "M",
-			Phone:     "0000000000",
-			Email:     req.Email,
-			BirthDay:  time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
-			Password:  req.Password,
-		}
-
-		if err := userSvc.Create(c.Request.Context(), admin); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		if err := assignSuperAdminUser(db, admin.ID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusCreated, gin.H{"message": "admin user created, you can now login"})
-	}
 }
