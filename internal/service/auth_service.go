@@ -39,41 +39,92 @@ func (s *AuthService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 		return nil, errors.New("failed to get user roles")
 	}
 
-	token, err := s.generateToken(user.ID, user.TenantID, roleNames)
+	token, err := s.generateToken(user.ID, user.TenantID, roleNames, "access", 24*time.Hour)
 	if err != nil {
 		return nil, errors.New("failed to generate token")
 	}
 
+	refreshToken, err := s.generateToken(user.ID, user.TenantID, roleNames, "refresh", 7*24*time.Hour)
+	if err != nil {
+		return nil, errors.New("failed to generate refresh token")
+	}
+
 	return &domain.LoginResponse{
-		Token:    token,
-		UserID:   user.ID,
-		TenantID: user.TenantID,
-		Roles:    roleNames,
+		Token:        token,
+		RefreshToken: refreshToken,
+		UserID:       user.ID,
+		TenantID:     user.TenantID,
+		Roles:        roleNames,
 	}, nil
 }
 
-func (s *AuthService) generateToken(userID, tenantID uint, roles []string) (string, error) {
+func (s *AuthService) generateToken(userID, tenantID uint, roles []string, tokenType string, expiry time.Duration) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "change-me-in-production"
-	}
 
 	claims := jwt.MapClaims{
 		"user_id":   userID,
 		"tenant_id": tenantID,
 		"roles":     roles,
-		"exp":       time.Now().Add(24 * time.Hour).Unix(),
+		"type":      tokenType,
+		"exp":       time.Now().Add(expiry).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
 }
 
+func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr string) (*domain.LoginResponse, error) {
+	secret := os.Getenv("JWT_SECRET")
+
+	token, err := jwt.Parse(refreshTokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(secret), nil
+	}, jwt.WithValidMethods([]string{"HS256"}))
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid refresh token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("invalid claims")
+	}
+
+	tokenType, _ := claims["type"].(string)
+	if tokenType != "refresh" {
+		return nil, errors.New("invalid token type")
+	}
+
+	userIDFloat, _ := claims["user_id"].(float64)
+	tenantIDFloat, _ := claims["tenant_id"].(float64)
+	rolesRaw, _ := claims["roles"].([]interface{})
+
+	userID := uint(userIDFloat)
+	tenantID := uint(tenantIDFloat)
+	roleNames := toStringSlice(rolesRaw)
+
+	newToken, err := s.generateToken(userID, tenantID, roleNames, "access", 24*time.Hour)
+	if err != nil {
+		return nil, errors.New("failed to generate token")
+	}
+
+	newRefreshToken, err := s.generateToken(userID, tenantID, roleNames, "refresh", 7*24*time.Hour)
+	if err != nil {
+		return nil, errors.New("failed to generate refresh token")
+	}
+
+	return &domain.LoginResponse{
+		Token:        newToken,
+		RefreshToken: newRefreshToken,
+		UserID:       userID,
+		TenantID:     tenantID,
+		Roles:        roleNames,
+	}, nil
+}
+
 func (s *AuthService) ValidateToken(tokenStr string) (*domain.Claims, error) {
 	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "change-me-in-production"
-	}
 
 	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -88,6 +139,11 @@ func (s *AuthService) ValidateToken(tokenStr string) (*domain.Claims, error) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, errors.New("invalid claims")
+	}
+
+	tokenType, _ := claims["type"].(string)
+	if tokenType != "access" {
+		return nil, errors.New("invalid token type")
 	}
 
 	userIDFloat, ok := claims["user_id"].(float64)

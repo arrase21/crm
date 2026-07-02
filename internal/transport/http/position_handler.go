@@ -51,21 +51,19 @@ func (h *PositionHandler) Create(c *gin.Context) {
 }
 
 func (h *PositionHandler) GetByID(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
-	// Check if we should include department in response
 	withDepartment := c.Query("include_department")
 
 	var position *domain.Position
+	var err error
 	if withDepartment == "true" {
-		position, err = h.svc.GetByIDWithDepartment(c.Request.Context(), uint(id))
+		position, err = h.svc.GetByIDWithDepartment(c.Request.Context(), id)
 	} else {
-		position, err = h.svc.GetByID(c.Request.Context(), uint(id))
+		position, err = h.svc.GetByID(c.Request.Context(), id)
 	}
 
 	if err != nil {
@@ -73,7 +71,7 @@ func (h *PositionHandler) GetByID(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "position not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, position)
@@ -91,15 +89,14 @@ func (h *PositionHandler) GetByName(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "position name not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, position)
 }
 
 func (h *PositionHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	page, limit := parsePagination(c)
 	departmentIDStr := c.Query("department_id")
 	var positions []domain.Position
 	var total int64
@@ -113,30 +110,18 @@ func (h *PositionHandler) List(c *gin.Context) {
 		}
 		positions, total, err = h.svc.ListByDepartment(c.Request.Context(), uint(departmentID), page, limit)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			internalError(c, err)
 			return
 		}
 	} else {
 		positions, total, err = h.svc.List(c.Request.Context(), page, limit)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			internalError(c, err)
 			return
 		}
 	}
 
-	totalPages := int(total) / limit
-	if int(total)%limit > 0 {
-		totalPages++
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"positions": positions,
-		"pagination": gin.H{
-			"page":        page,
-			"limit":       limit,
-			"total":       total,
-			"total_pages": totalPages,
-		},
-	})
+	respondPaginated(c, positions, total, page, limit, "positions")
 }
 
 type UpdatePositionRequest struct {
@@ -147,10 +132,8 @@ type UpdatePositionRequest struct {
 }
 
 func (h *PositionHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 	var req UpdatePositionRequest
@@ -158,13 +141,13 @@ func (h *PositionHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	existingPosition, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	existingPosition, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrPositionNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "position not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	position := &domain.Position{
@@ -197,25 +180,23 @@ func (h *PositionHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "position updated"})
 }
 
 func (h *PositionHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
-	if err := h.svc.Delete(c.Request.Context(), uint(id)); err != nil {
+	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
 		if errors.Is(err, domain.ErrPositionNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "position not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)

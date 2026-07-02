@@ -9,19 +9,23 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func isDuplicateError(err error) bool {
+func isDuplicateError(err error) (bool, string) {
 	if err == nil {
-		return false
+		return false, ""
 	}
 
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-		return true
+		return true, pgErr.ConstraintName
 	}
 
 	errMsg := strings.ToLower(err.Error())
-	return strings.Contains(errMsg, "duplicate") ||
-		strings.Contains(errMsg, "unique constraint")
+	if strings.Contains(errMsg, "duplicate") ||
+		strings.Contains(errMsg, "unique constraint") {
+		return true, ""
+	}
+
+	return false, ""
 }
 
 func tenantFromCtx(ctx context.Context) (uint, error) {

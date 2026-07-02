@@ -19,7 +19,7 @@ func NewUserService(u domain.UserRepo) *UserService {
 	}
 }
 
-func (s *UserService) Create(ctx context.Context, usr *domain.User) error {
+func (s *UserService) Create(ctx context.Context, usr *domain.User, password string) error {
 	if usr == nil {
 		return errors.New("user cannot be nil")
 	}
@@ -35,10 +35,10 @@ func (s *UserService) Create(ctx context.Context, usr *domain.User) error {
 		return domain.ErrDniAlreadyExist
 	}
 
-	if usr.Password == "" {
+	if password == "" {
 		return errors.New("password is required")
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(usr.Password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}

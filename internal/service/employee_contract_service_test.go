@@ -255,57 +255,49 @@ func validEmployeeContract() *domain.EmployeeContract {
 func TestEmployeeContractService_Create(t *testing.T) {
 	tests := []struct {
 		name      string
-		setupMocks func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo, *MockCountryParamRepo, *MockPayrollRecordRepo)
+		setupMocks func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo)
 		input     *domain.EmployeeContract
 		wantErr   bool
 		errType   error
 	}{
 		{
 			name: "create valid contract - success",
-			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo, *MockCountryParamRepo, *MockPayrollRecordRepo) {
+			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo) {
 				return NewMockEmployeeContractRepo(),
 					&MockEmployeeRepo{employees: map[uint]*domain.Employee{1: {ID: 1}}, userIndex: map[uint]*domain.Employee{}, nextID: 2},
-					NewMockContractTypeRepo(),
-					NewMockCountryParamRepo(),
-					NewMockPayrollRecordRepo()
+					NewMockContractTypeRepo()
 			},
 			input:   validEmployeeContract(),
 			wantErr: false,
 		},
 		{
 			name: "create with nil - should fail",
-			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo, *MockCountryParamRepo, *MockPayrollRecordRepo) {
+			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo) {
 				return NewMockEmployeeContractRepo(),
 					NewMockEmployeeRepo(),
-					NewMockContractTypeRepo(),
-					NewMockCountryParamRepo(),
-					NewMockPayrollRecordRepo()
+					NewMockContractTypeRepo()
 			},
 			input:   nil,
 			wantErr: true,
 		},
 		{
 			name: "create with missing fields - should fail validation",
-			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo, *MockCountryParamRepo, *MockPayrollRecordRepo) {
+			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo) {
 				return NewMockEmployeeContractRepo(),
 					NewMockEmployeeRepo(),
-					NewMockContractTypeRepo(),
-					NewMockCountryParamRepo(),
-					NewMockPayrollRecordRepo()
+					NewMockContractTypeRepo()
 			},
 			input:   &domain.EmployeeContract{EmployeeID: 0},
 			wantErr: true,
 		},
 		{
 			name: "create - employee not found",
-			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo, *MockCountryParamRepo, *MockPayrollRecordRepo) {
+			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo) {
 				empRepo := NewMockEmployeeRepo()
 				empRepo.GetByIDErr = domain.ErrEmployeeNotFound
 				return NewMockEmployeeContractRepo(),
 					empRepo,
-					NewMockContractTypeRepo(),
-					NewMockCountryParamRepo(),
-					NewMockPayrollRecordRepo()
+					NewMockContractTypeRepo()
 			},
 			input:   validEmployeeContract(),
 			wantErr: true,
@@ -313,15 +305,13 @@ func TestEmployeeContractService_Create(t *testing.T) {
 		},
 		{
 			name: "create with contract type - success",
-			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo, *MockCountryParamRepo, *MockPayrollRecordRepo) {
+			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo) {
 				ctRepo := NewMockContractTypeRepo()
 				ctRepo.ctypes[1] = &domain.ContractType{ID: 1, Name: "Full Time"}
 				ctRepo.nextID = 2
 				return NewMockEmployeeContractRepo(),
 					&MockEmployeeRepo{employees: map[uint]*domain.Employee{1: {ID: 1}}, userIndex: map[uint]*domain.Employee{}, nextID: 2},
-					ctRepo,
-					NewMockCountryParamRepo(),
-					NewMockPayrollRecordRepo()
+					ctRepo
 			},
 			input: func() *domain.EmployeeContract {
 				ec := validEmployeeContract()
@@ -332,14 +322,12 @@ func TestEmployeeContractService_Create(t *testing.T) {
 		},
 		{
 			name: "create - contract type not found",
-			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo, *MockCountryParamRepo, *MockPayrollRecordRepo) {
+			setupMocks: func() (*MockEmployeeContractRepo, *MockEmployeeRepo, *MockContractTypeRepo) {
 				ctRepo := NewMockContractTypeRepo()
 				ctRepo.GetByIDErr = domain.ErrContractTypeNotFound
 				return NewMockEmployeeContractRepo(),
 					&MockEmployeeRepo{employees: map[uint]*domain.Employee{1: {ID: 1}}, userIndex: map[uint]*domain.Employee{}, nextID: 2},
-					ctRepo,
-					NewMockCountryParamRepo(),
-					NewMockPayrollRecordRepo()
+					ctRepo
 			},
 			input: func() *domain.EmployeeContract {
 				ec := validEmployeeContract()
@@ -353,8 +341,8 @@ func TestEmployeeContractService_Create(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockContract, mockEmp, mockCT, mockCP, mockPR := tt.setupMocks()
-			svc := NewEmployeeContractService(mockContract, mockEmp, mockCT, mockCP, mockPR, NewMockOvertimeRepo())
+			mockContract, mockEmp, mockCT := tt.setupMocks()
+			svc := NewEmployeeContractService(mockContract, mockEmp, mockCT)
 			ctx := context.Background()
 
 			err := svc.Create(ctx, tt.input)
@@ -379,7 +367,7 @@ func TestEmployeeContractService_GetByID(t *testing.T) {
 	mockContract := NewMockEmployeeContractRepo()
 	mockContract.contracts[1] = &domain.EmployeeContract{ID: 1, EmployeeID: 1}
 
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo())
 	ctx := context.Background()
 
 	t.Run("get existing - success", func(t *testing.T) {
@@ -409,7 +397,7 @@ func TestEmployeeContractService_GetByID(t *testing.T) {
 
 func TestEmployeeContractService_GetByEmployeeID(t *testing.T) {
 	mockContract := NewMockEmployeeContractRepo()
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo())
 	ctx := context.Background()
 
 	t.Run("get by employee id 0 - error", func(t *testing.T) {
@@ -426,7 +414,7 @@ func TestEmployeeContractService_List(t *testing.T) {
 		mockContract.contracts[uint(i)] = &domain.EmployeeContract{ID: uint(i), EmployeeID: uint(i)}
 	}
 
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo())
 	ctx := context.Background()
 
 	contracts, total, err := svc.List(ctx, 1, 10)
@@ -445,7 +433,7 @@ func TestEmployeeContractService_Update(t *testing.T) {
 	mockContract := NewMockEmployeeContractRepo()
 	mockContract.contracts[1] = &domain.EmployeeContract{ID: 1, EmployeeID: 1}
 
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo())
 	ctx := context.Background()
 
 	t.Run("update with nil - should fail", func(t *testing.T) {
@@ -481,7 +469,7 @@ func TestEmployeeContractService_Delete(t *testing.T) {
 	mockContract := NewMockEmployeeContractRepo()
 	mockContract.contracts[1] = &domain.EmployeeContract{ID: 1, EmployeeID: 1}
 
-	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), NewMockPayrollRecordRepo(), NewMockOvertimeRepo())
+	svc := NewEmployeeContractService(mockContract, NewMockEmployeeRepo(), NewMockContractTypeRepo())
 	ctx := context.Background()
 
 	t.Run("delete existing - success", func(t *testing.T) {
@@ -509,13 +497,4 @@ func TestEmployeeContractService_Delete(t *testing.T) {
 	})
 }
 
-func TestEmployeeContractService_GetPayrollRecords(t *testing.T) {
-	mockPR := NewMockPayrollRecordRepo()
-	svc := NewEmployeeContractService(NewMockEmployeeContractRepo(), NewMockEmployeeRepo(), NewMockContractTypeRepo(), NewMockCountryParamRepo(), mockPR, NewMockOvertimeRepo())
-	ctx := context.Background()
 
-	_, _, err := svc.GetPayrollRecords(ctx, 1, 1, 10)
-	if err != nil {
-		t.Errorf("Expected no error but got: %v", err)
-	}
-}

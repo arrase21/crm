@@ -275,7 +275,7 @@ func TestEmployeeContractHandler_Create_Success(t *testing.T) {
 	empRepo := newMockEmpRepoForContract()
 	empRepo.employees[1] = &domain.Employee{ID: 1}
 
-	svc := service.NewEmployeeContractService(contractRepo, empRepo, &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, empRepo, &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -304,7 +304,7 @@ func TestEmployeeContractHandler_Create_Success(t *testing.T) {
 }
 
 func TestEmployeeContractHandler_Create_InvalidJSON(t *testing.T) {
-	svc := service.NewEmployeeContractService(newMockEmployeeContractRepo(), newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(newMockEmployeeContractRepo(), newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -325,7 +325,7 @@ func TestEmployeeContractHandler_GetByID_Success(t *testing.T) {
 	contractRepo := newMockEmployeeContractRepo()
 	contractRepo.contracts[1] = &domain.EmployeeContract{ID: 1, EmployeeID: 1, BaseSalary: 5000}
 
-	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -344,7 +344,7 @@ func TestEmployeeContractHandler_GetByID_Success(t *testing.T) {
 func TestEmployeeContractHandler_GetByID_NotFound(t *testing.T) {
 	contractRepo := newMockEmployeeContractRepo()
 
-	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -364,7 +364,7 @@ func TestEmployeeContractHandler_GetByEmployeeID_Success(t *testing.T) {
 	contractRepo := newMockEmployeeContractRepo()
 	contractRepo.empIdx[1] = []domain.EmployeeContract{{ID: 1, EmployeeID: 1, BaseSalary: 5000}}
 
-	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -386,7 +386,7 @@ func TestEmployeeContractHandler_List_Success(t *testing.T) {
 		contractRepo.contracts[uint(i)] = &domain.EmployeeContract{ID: uint(i), EmployeeID: uint(i), BaseSalary: 5000}
 	}
 
-	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -406,7 +406,7 @@ func TestEmployeeContractHandler_Update_Success(t *testing.T) {
 	contractRepo := newMockEmployeeContractRepo()
 	contractRepo.contracts[1] = &domain.EmployeeContract{ID: 1, EmployeeID: 1, BaseSalary: 5000}
 
-	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -429,7 +429,7 @@ func TestEmployeeContractHandler_Update_Success(t *testing.T) {
 func TestEmployeeContractHandler_Update_NotFound(t *testing.T) {
 	contractRepo := newMockEmployeeContractRepo()
 
-	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -453,7 +453,7 @@ func TestEmployeeContractHandler_Delete_Success(t *testing.T) {
 	contractRepo := newMockEmployeeContractRepo()
 	contractRepo.contracts[1] = &domain.EmployeeContract{ID: 1}
 
-	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 
@@ -472,7 +472,7 @@ func TestEmployeeContractHandler_Delete_Success(t *testing.T) {
 func TestEmployeeContractHandler_Delete_NotFound(t *testing.T) {
 	contractRepo := newMockEmployeeContractRepo()
 
-	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{}, &mockCountryParamRepoForContract{}, &mockPayrollRecordRepoForContract{}, &mockOvertimeRepoForContract{})
+	svc := service.NewEmployeeContractService(contractRepo, newMockEmpRepoForContract(), &mockContractTypeRepoForContract{})
 	handler := NewEmployeeContractHandler(svc)
 	router := setupTestRouter()
 

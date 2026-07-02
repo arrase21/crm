@@ -62,20 +62,18 @@ func (h *EmployeeHandler) Create(c *gin.Context) {
 }
 
 func (h *EmployeeHandler) GetByID(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
-	emp, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	emp, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrEmployeeNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "employee not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -101,7 +99,7 @@ func (h *EmployeeHandler) GetByUserID(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "employee not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -109,8 +107,7 @@ func (h *EmployeeHandler) GetByUserID(c *gin.Context) {
 }
 
 func (h *EmployeeHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	page, limit := parsePagination(c)
 	activeOnly := c.Query("active")
 	supervisorID, _ := strconv.ParseUint(c.Query("supervisor_id"), 10, 32)
 
@@ -128,24 +125,11 @@ func (h *EmployeeHandler) List(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
-	totalPages := int(total) / limit
-	if int(total)%limit > 0 {
-		totalPages++
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"employees": employees,
-		"pagination": gin.H{
-			"page":        page,
-			"limit":       limit,
-			"total":       total,
-			"total_pages": totalPages,
-		},
-	})
+	respondPaginated(c, employees, total, page, limit, "employees")
 }
 
 type UpdateEmployeeRequest struct {
@@ -157,10 +141,8 @@ type UpdateEmployeeRequest struct {
 }
 
 func (h *EmployeeHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
@@ -170,13 +152,13 @@ func (h *EmployeeHandler) Update(c *gin.Context) {
 		return
 	}
 
-	existingEmp, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	existingEmp, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrEmployeeNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "employee not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -223,7 +205,7 @@ func (h *EmployeeHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -231,19 +213,17 @@ func (h *EmployeeHandler) Update(c *gin.Context) {
 }
 
 func (h *EmployeeHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
-	if err := h.svc.Delete(c.Request.Context(), uint(id)); err != nil {
+	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
 		if errors.Is(err, domain.ErrEmployeeNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "employee not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 

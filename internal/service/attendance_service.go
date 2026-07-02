@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/arrase21/crm/internal/domain"
 )
@@ -52,29 +53,10 @@ func (s *AttendanceService) Update(ctx context.Context, a *domain.Attendance) er
 	if a.ID == 0 {
 		return errors.New("attendance id is required")
 	}
-
-	claims, ok := ctx.Value(domain.ClaimsKey).(*domain.Claims)
-	if !ok {
-		return errors.New("unauthorized")
-	}
-
-	if !hasAnyRole(claims.Roles, "super_admin", "payroll_manager") {
-		return errors.New("only payroll managers can update attendance")
-	}
-
 	return s.attendanceRepo.Update(ctx, a)
 }
 
 func (s *AttendanceService) Delete(ctx context.Context, id uint) error {
-	claims, ok := ctx.Value(domain.ClaimsKey).(*domain.Claims)
-	if !ok {
-		return errors.New("unauthorized")
-	}
-
-	if !hasAnyRole(claims.Roles, "super_admin") {
-		return errors.New("only admins can delete attendance")
-	}
-
 	return s.attendanceRepo.Delete(ctx, id)
 }
 
@@ -84,19 +66,13 @@ func (s *AttendanceService) checkSupervisorScope(ctx context.Context, targetEmpl
 		return nil
 	}
 
-	for _, role := range claims.Roles {
-		if role == "super_admin" || role == "payroll_manager" {
-			return nil
-		}
-	}
-
-	if !hasAnyRole(claims.Roles, "supervisor") {
-		return errors.New("insufficient permissions")
+	if slices.Contains(claims.Roles, "super_admin") {
+		return nil
 	}
 
 	supervisorEmp, err := s.employeeRepo.GetByUserID(ctx, claims.UserID)
 	if err != nil {
-		return fmt.Errorf("supervisor employee record not found: %w", err)
+		return fmt.Errorf("employee record not found: %w", err)
 	}
 
 	targetEmp, err := s.employeeRepo.GetByID(ctx, targetEmployeeID)
@@ -105,21 +81,8 @@ func (s *AttendanceService) checkSupervisorScope(ctx context.Context, targetEmpl
 	}
 
 	if targetEmp.DepartmentID != supervisorEmp.DepartmentID {
-		return errors.New("you can only register attendance for employees in your own area")
+		return errors.New("you can only manage employees in your own department")
 	}
 
 	return nil
-}
-
-func hasAnyRole(roles []string, targets ...string) bool {
-	targetSet := make(map[string]struct{}, len(targets))
-	for _, t := range targets {
-		targetSet[t] = struct{}{}
-	}
-	for _, r := range roles {
-		if _, ok := targetSet[r]; ok {
-			return true
-		}
-	}
-	return false
 }

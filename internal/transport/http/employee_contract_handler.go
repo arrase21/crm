@@ -78,20 +78,18 @@ func (h *EmployeeContractHandler) Create(c *gin.Context) {
 }
 
 func (h *EmployeeContractHandler) GetByID(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
-	contract, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	contract, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrContractNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "contract not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -113,7 +111,7 @@ func (h *EmployeeContractHandler) GetByEmployeeID(c *gin.Context) {
 
 	contracts, err := h.svc.GetByEmployeeID(c.Request.Context(), uint(empID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -121,29 +119,15 @@ func (h *EmployeeContractHandler) GetByEmployeeID(c *gin.Context) {
 }
 
 func (h *EmployeeContractHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	page, limit := parsePagination(c)
 
 	contracts, total, err := h.svc.List(c.Request.Context(), page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
-	totalPages := int(total) / limit
-	if int(total)%limit > 0 {
-		totalPages++
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"contracts": contracts,
-		"pagination": gin.H{
-			"page":        page,
-			"limit":       limit,
-			"total":       total,
-			"total_pages": totalPages,
-		},
-	})
+	respondPaginated(c, contracts, total, page, limit, "contracts")
 }
 
 type UpdateEmployeeContractRequest struct {
@@ -159,10 +143,8 @@ type UpdateEmployeeContractRequest struct {
 }
 
 func (h *EmployeeContractHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
@@ -172,13 +154,13 @@ func (h *EmployeeContractHandler) Update(c *gin.Context) {
 		return
 	}
 
-	existing, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	existing, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrContractNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "contract not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -253,7 +235,7 @@ func (h *EmployeeContractHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "contract not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -261,103 +243,19 @@ func (h *EmployeeContractHandler) Update(c *gin.Context) {
 }
 
 func (h *EmployeeContractHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
-	if err := h.svc.Delete(c.Request.Context(), uint(id)); err != nil {
+	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
 		if errors.Is(err, domain.ErrContractNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "contract not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusNoContent, nil)
-}
-
-type CalculatePayrollRequest struct {
-	ContractID  uint   `json:"contract_id" binding:"required"`
-	PeriodStart string `json:"period_start" binding:"required"`
-	PeriodEnd   string `json:"period_end" binding:"required"`
-	Bonuses     int64  `json:"bonuses"`
-	Commissions int64  `json:"commissions"`
-}
-
-func (h *EmployeeContractHandler) CalculatePayroll(c *gin.Context) {
-	var req CalculatePayrollRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	periodStart, err := time.Parse("2006-01-02", req.PeriodStart)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid period_start format, use YYYY-MM-DD"})
-		return
-	}
-
-	periodEnd, err := time.Parse("2006-01-02", req.PeriodEnd)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid period_end format, use YYYY-MM-DD"})
-		return
-	}
-
-	record, err := h.svc.CalculatePayroll(c.Request.Context(), req.ContractID, periodStart, periodEnd, req.Bonuses, req.Commissions)
-	if err != nil {
-		if errors.Is(err, domain.ErrContractNotFound) || errors.Is(err, domain.ErrCountryParamNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		if errors.Is(err, domain.ErrCalculatorNotFound) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, record)
-}
-
-func (h *EmployeeContractHandler) GetPayrollRecords(c *gin.Context) {
-	contractIDStr := c.Query("contract_id")
-	if contractIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "contract_id query parameter is required"})
-		return
-	}
-
-	contractID, err := strconv.ParseUint(contractIDStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid contract_id"})
-		return
-	}
-
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-
-	records, total, err := h.svc.GetPayrollRecords(c.Request.Context(), uint(contractID), page, limit)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	totalPages := int(total) / limit
-	if int(total)%limit > 0 {
-		totalPages++
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"payroll_records": records,
-		"pagination": gin.H{
-			"page":        page,
-			"limit":       limit,
-			"total":       total,
-			"total_pages": totalPages,
-		},
-	})
 }

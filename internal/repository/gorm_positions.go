@@ -30,10 +30,11 @@ func (r *GormPositionRepo) Create(ctx context.Context, pstn *domain.Position) er
 	pstn.TenantID = tenantID
 	err = r.db.WithContext(ctx).Create(pstn).Error
 	if err != nil {
-		if isDuplicateError(err) {
-			if strings.Contains(err.Error(), "name") {
+		if ok, constraint := isDuplicateError(err); ok {
+			if strings.Contains(constraint, "name") {
 				return domain.ErrPositionNameExists
 			}
+			return domain.ErrPositionNameExists
 		}
 		return err
 	}
@@ -203,10 +204,11 @@ func (r *GormPositionRepo) Update(ctx context.Context, pstn *domain.Position) er
 	pstn.TenantID = existing.TenantID
 	err = r.db.WithContext(ctx).Model(&domain.Position{}).Where("id = ? AND tenant_id = ?", pstn.ID, tenantID).Updates(pstn).Error
 	if err != nil {
-		if isDuplicateError(err) {
-			if strings.Contains(err.Error(), "name") {
+		if ok, constraint := isDuplicateError(err); ok {
+			if strings.Contains(constraint, "name") {
 				return domain.ErrPositionNameExists
 			}
+			return domain.ErrPositionNameExists
 		}
 		return err
 	}

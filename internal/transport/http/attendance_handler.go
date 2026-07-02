@@ -83,8 +83,7 @@ func (h *AttendanceHandler) GetByID(c *gin.Context) {
 }
 
 func (h *AttendanceHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	page, limit := parsePagination(c)
 	employeeID, _ := strconv.ParseUint(c.Query("employee_id"), 10, 32)
 	deptID, _ := strconv.ParseUint(c.Query("department_id"), 10, 32)
 
@@ -102,22 +101,11 @@ func (h *AttendanceHandler) List(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
-	totalPages := int(total) / limit
-	if int(total)%limit > 0 {
-		totalPages++
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"attendance": records,
-		"pagination": gin.H{
-			"page": page, "limit": limit,
-			"total": total, "total_pages": totalPages,
-		},
-	})
+	respondPaginated(c, records, total, page, limit, "attendance")
 }
 
 type UpdateAttendanceRequest struct {

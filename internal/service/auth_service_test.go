@@ -107,7 +107,7 @@ func TestAuthService_GenerateAndValidateToken(t *testing.T) {
 	db := setupAuthTestDB(t)
 	svc := newAuthService(db)
 
-	token, err := svc.generateToken(1, 1, []string{"admin"})
+	token, err := svc.generateToken(1, 1, []string{"admin"}, "access", 24*time.Hour)
 	if err != nil {
 		t.Fatalf("expected no error generating token, got %v", err)
 	}

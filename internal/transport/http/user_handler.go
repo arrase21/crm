@@ -3,7 +3,6 @@ package http
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/arrase21/crm/internal/domain"
@@ -56,7 +55,6 @@ func (h *UserHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Construir objeto de dominio
 	user := &domain.User{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
@@ -64,11 +62,10 @@ func (h *UserHandler) Create(c *gin.Context) {
 		Gender:    req.Gender,
 		Phone:     req.Phone,
 		Email:     req.Email,
-		Password:  req.Password,
 		BirthDay:  birth,
 	}
 
-	if err := h.svc.Create(c.Request.Context(), user); err != nil {
+	if err := h.svc.Create(c.Request.Context(), user, req.Password); err != nil {
 		if errors.Is(err, domain.ErrDniAlreadyExist) ||
 			errors.Is(err, domain.ErrEmailAlreadyExist) ||
 			errors.Is(err, domain.ErrPhoneAlreadyExist) {
@@ -83,21 +80,18 @@ func (h *UserHandler) Create(c *gin.Context) {
 }
 
 func (h *UserHandler) GetByID(c *gin.Context) {
-	idStr := c.Param("id")
-
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
-	usr, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	usr, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -117,7 +111,7 @@ func (h *UserHandler) GetByDni(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -125,30 +119,15 @@ func (h *UserHandler) GetByDni(c *gin.Context) {
 }
 
 func (h *UserHandler) List(c *gin.Context) {
-	// Parsear paginación
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	page, limit := parsePagination(c)
 
 	usrs, total, err := h.svc.List(c.Request.Context(), page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
-	totalPages := int(total) / limit
-	if int(total)%limit > 0 {
-		totalPages++
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"users": usrs,
-		"pagination": gin.H{
-			"page":        page,
-			"limit":       limit,
-			"total":       total,
-			"total_pages": totalPages,
-		},
-	})
+	respondPaginated(c, usrs, total, page, limit, "users")
 }
 
 type UpdateUserRequest struct {
@@ -162,10 +141,8 @@ type UpdateUserRequest struct {
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
@@ -175,32 +152,22 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Obtener usuario existente con sus roles
-	existingUser, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	existingUser, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
-	// Preservar campos que no deben cambiar
-	// originalRoles := existingUser.Roles
-	originalTenantID := existingUser.TenantID
-	originalID := existingUser.ID
-	originalCreatedAt := existingUser.CreatedAt
-
-	// Construir usuario actualizado
 	user := &domain.User{
-		ID:        originalID,
-		TenantID:  originalTenantID,
-		CreatedAt: originalCreatedAt,
-		// Roles:     originalRoles, // Preservar roles originales
+		ID:        existingUser.ID,
+		TenantID:  existingUser.TenantID,
+		CreatedAt: existingUser.CreatedAt,
 	}
 
-	// Actualizar solo los campos enviados
 	if req.FirstName != nil {
 		user.FirstName = *req.FirstName
 	} else {
@@ -249,7 +216,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -257,19 +224,17 @@ func (h *UserHandler) Update(c *gin.Context) {
 }
 
 func (h *UserHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 
-	if err := h.svc.Delete(c.Request.Context(), uint(id)); err != nil {
+	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 

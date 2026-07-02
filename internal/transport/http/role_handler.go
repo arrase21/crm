@@ -40,7 +40,7 @@ func (h *RoleHandler) Assign(c *gin.Context) {
 		case err.Error() == "role not found":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			internalError(c, err)
 		}
 		return
 	}
@@ -68,7 +68,7 @@ func (h *RoleHandler) Unassign(c *gin.Context) {
 		case err.Error() == "role not assigned to user":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			internalError(c, err)
 		}
 		return
 	}
@@ -83,7 +83,7 @@ func (h *RoleHandler) Unassign(c *gin.Context) {
 func (h *RoleHandler) ListRoles(c *gin.Context) {
 	roles, err := h.svc.ListRoles(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, roles)
@@ -98,7 +98,7 @@ func (h *RoleHandler) UserRoles(c *gin.Context) {
 
 	roles, err := h.svc.GetUserRoles(c.Request.Context(), claims.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 

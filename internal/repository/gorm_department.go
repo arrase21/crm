@@ -30,12 +30,14 @@ func (r *GormDepartmentRepo) Create(ctx context.Context, dept *domain.Department
 	dept.TenantID = tenantID
 	err = r.db.WithContext(ctx).Create(dept).Error
 	if err != nil {
-		if isDuplicateError(err) {
-			if strings.Contains(err.Error(), "name") {
+		if ok, constraint := isDuplicateError(err); ok {
+			switch {
+			case strings.Contains(constraint, "name"):
 				return domain.ErrDepartmentNameExists
-			}
-			if strings.Contains(err.Error(), "code") {
+			case strings.Contains(constraint, "code"):
 				return domain.ErrDepartmentCodeExists
+			default:
+				return domain.ErrDepartmentNameExists
 			}
 		}
 		return err

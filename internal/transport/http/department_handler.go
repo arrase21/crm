@@ -3,7 +3,6 @@ package http
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/arrase21/crm/internal/domain"
 	"github.com/arrase21/crm/internal/service"
@@ -49,19 +48,17 @@ func (h *DepartmentHandler) Create(c *gin.Context) {
 }
 
 func (h *DepartmentHandler) GetByID(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
-	dept, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	dept, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrDepartmentNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "department not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, dept)
@@ -79,7 +76,7 @@ func (h *DepartmentHandler) GetByCode(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "department code not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, dept)
@@ -97,35 +94,22 @@ func (h *DepartmentHandler) GetByName(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "department name not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, dept)
 }
 
 func (h *DepartmentHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	page, limit := parsePagination(c)
 
 	dept, total, err := h.svc.List(c.Request.Context(), page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
-	totalPages := int(total) / limit
-	if int(total)%limit > 0 {
-		totalPages++
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"departments": dept,
-		"pagination": gin.H{
-			"page":        page,
-			"limit":       limit,
-			"total":       total,
-			"total_pages": totalPages,
-		},
-	})
+	respondPaginated(c, dept, total, page, limit, "departments")
 }
 
 type UpdateDepartmentRequest struct {
@@ -135,10 +119,8 @@ type UpdateDepartmentRequest struct {
 }
 
 func (h *DepartmentHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
 	var req UpdateDepartmentRequest
@@ -146,13 +128,13 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	existingDept, err := h.svc.GetByID(c.Request.Context(), uint(id))
+	existingDept, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrDepartmentNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "department not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	dept := &domain.Department{
@@ -180,25 +162,23 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "department updated"})
 }
 
 func (h *DepartmentHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID"})
+	id, ok := parseID(c)
+	if !ok {
 		return
 	}
-	if err := h.svc.Delete(c.Request.Context(), uint(id)); err != nil {
+	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
 		if errors.Is(err, domain.ErrDepartmentNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "department not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)

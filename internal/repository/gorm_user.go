@@ -30,17 +30,17 @@ func (r *GormUserRepo) Create(ctx context.Context, usr *domain.User) error {
 	usr.TenantID = tenantID
 	err = r.db.WithContext(ctx).Create(usr).Error
 	if err != nil {
-		if isDuplicateError(err) {
-			if strings.Contains(err.Error(), "dni") {
+		if ok, constraint := isDuplicateError(err); ok {
+			switch {
+			case strings.Contains(constraint, "dni"):
+				return domain.ErrDniAlreadyExist
+			case strings.Contains(constraint, "email"):
+				return domain.ErrEmailAlreadyExist
+			case strings.Contains(constraint, "phone"):
+				return domain.ErrPhoneAlreadyExist
+			default:
 				return domain.ErrDniAlreadyExist
 			}
-			if strings.Contains(err.Error(), "email") {
-				return domain.ErrEmailAlreadyExist
-			}
-			if strings.Contains(err.Error(), "phone") {
-				return domain.ErrPhoneAlreadyExist
-			}
-			return errors.New("duplicate entry")
 		}
 		return err
 	}
@@ -178,17 +178,17 @@ func (r *GormUserRepo) Update(ctx context.Context, usr *domain.User) error {
 		Updates(updates).Error
 
 	if err != nil {
-		if isDuplicateError(err) {
-			if strings.Contains(err.Error(), "dni") {
+		if ok, constraint := isDuplicateError(err); ok {
+			switch {
+			case strings.Contains(constraint, "dni"):
+				return domain.ErrDniAlreadyExist
+			case strings.Contains(constraint, "email"):
+				return domain.ErrEmailAlreadyExist
+			case strings.Contains(constraint, "phone"):
+				return domain.ErrPhoneAlreadyExist
+			default:
 				return domain.ErrDniAlreadyExist
 			}
-			if strings.Contains(err.Error(), "email") {
-				return domain.ErrEmailAlreadyExist
-			}
-			if strings.Contains(err.Error(), "phone") {
-				return domain.ErrPhoneAlreadyExist
-			}
-			return errors.New("duplicate entry")
 		}
 		return err
 	}

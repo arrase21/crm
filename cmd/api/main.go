@@ -46,6 +46,7 @@ func main() {
 		slog.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
+	db.Exec("CREATE SCHEMA IF NOT EXISTS crm")
 	db.Exec("SET search_path TO crm,public")
 
 	sqlDB, err := db.DB()
@@ -101,8 +102,11 @@ func main() {
 	contractRepo := repository.NewGormEmployeeContractRepository(db)
 	payrollRepo := repository.NewGormPayrollRecordRepository(db)
 	otRepo := repository.NewGormOvertimeRepository(db)
-	contractSvc := service.NewEmployeeContractService(contractRepo, empRepo, ctRepo, countryRepo, payrollRepo, otRepo)
+	contractSvc := service.NewEmployeeContractService(contractRepo, empRepo, ctRepo)
 	contractHandler := httptransport.NewEmployeeContractHandler(contractSvc)
+
+	payrollSvc := service.NewPayrollService(contractRepo, countryRepo, payrollRepo, otRepo)
+	payrollHandler := httptransport.NewPayrollHandler(payrollSvc)
 
 	attRepo := repository.NewGormAttendanceRepository(db)
 	attSvc := service.NewAttendanceService(attRepo, empRepo)
@@ -110,6 +114,12 @@ func main() {
 
 	otSvc := service.NewOvertimeService(otRepo, empRepo)
 	otHandler := httptransport.NewOvertimeHandler(otSvc)
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		slog.Error("JWT_SECRET environment variable is required")
+		os.Exit(1)
+	}
 
 	roleRepo := repository.NewGormRoleRepository(db)
 	authSvc := service.NewAuthService(userRepo, roleRepo)
@@ -145,8 +155,9 @@ func main() {
 		c.Next()
 	})
 
+	corsOrigins := getEnv("CORS_ORIGINS", "*")
 	router.Use(cors.New(cors.Config{
-		AllowAllOrigins:  true,
+		AllowOrigins:     []string{corsOrigins},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Tenant-ID"},
 		MaxAge:           12 * time.Hour,
@@ -156,6 +167,7 @@ func main() {
 	api.Use(middleware.TenantMiddleware())
 
 	api.POST("/auth/login", authHandler.Login)
+	api.POST("/auth/refresh", authHandler.Refresh)
 
 	if seedEnabled != "true" {
 		api.POST("/setup", newSetupHandler(db, userSvc))
@@ -194,7 +206,7 @@ func main() {
 		{
 			positions.POST("", permMiddleware.RequirePermission("positions", "create"), pstnHandler.Create)
 			positions.GET("/:id", permMiddleware.RequirePermission("positions", "read"), pstnHandler.GetByID)
-			positions.GET("/search", permMiddleware.RequirePermission("positions", "read"), pstnHandler.GetByName)
+			positions.GET("", permMiddleware.RequirePermission("positions", "read"), pstnHandler.GetByName)
 			positions.GET("/list", permMiddleware.RequirePermission("positions", "read"), pstnHandler.List)
 			positions.PUT("/:id", permMiddleware.RequirePermission("positions", "update"), pstnHandler.Update)
 			positions.DELETE("/:id", permMiddleware.RequirePermission("positions", "delete"), pstnHandler.Delete)
@@ -219,8 +231,8 @@ func main() {
 		}
 		payroll := protected.Group("/payroll")
 		{
-			payroll.POST("/calculate", permMiddleware.RequirePermission("payroll", "calculate"), contractHandler.CalculatePayroll)
-			payroll.GET("/records", permMiddleware.RequirePermission("payroll", "read"), contractHandler.GetPayrollRecords)
+			payroll.POST("/calculate", permMiddleware.RequirePermission("payroll", "calculate"), payrollHandler.CalculatePayroll)
+			payroll.GET("/records", permMiddleware.RequirePermission("payroll", "read"), payrollHandler.GetPayrollRecords)
 		}
 		attendance := protected.Group("/attendance")
 		attendance.Use(middleware.ScopeSupervisor(db))

@@ -6,10 +6,15 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token    string   `json:"token"`
-	UserID   uint     `json:"user_id"`
-	TenantID uint     `json:"tenant_id"`
-	Roles    []string `json:"roles"`
+	Token        string   `json:"token"`
+	RefreshToken string   `json:"refresh_token"`
+	UserID       uint     `json:"user_id"`
+	TenantID     uint     `json:"tenant_id"`
+	Roles        []string `json:"roles"`
+}
+
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
 type Claims struct {

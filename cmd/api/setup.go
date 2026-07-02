@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -40,16 +41,17 @@ func newSetupHandler(db *gorm.DB, userSvc *service.UserService) gin.HandlerFunc 
 			Phone:     "0000000000",
 			Email:     req.Email,
 			BirthDay:  time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
-			Password:  req.Password,
 		}
 
-		if err := userSvc.Create(c.Request.Context(), admin); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if err := userSvc.Create(c.Request.Context(), admin, req.Password); err != nil {
+			slog.Error("setup: failed to create admin user", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
 
 		if err := database.AssignSuperAdminUser(db, admin.ID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			slog.Error("setup: failed to assign super admin role", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
 

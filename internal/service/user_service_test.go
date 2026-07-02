@@ -195,7 +195,6 @@ func TestUserService_Create(t *testing.T) {
 			Dni:       "12345678",
 			Phone:     "1234567890",
 			Gender:    "M",
-			Password:  "test1234",
 			BirthDay:  time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
 		}
 	}
@@ -203,6 +202,7 @@ func TestUserService_Create(t *testing.T) {
 		name      string
 		setupMock func(*MockUserRepo)
 		input     *domain.User
+		password  string
 		wantErr   bool
 		errType   error // El error específico que esperamos
 	}{
@@ -211,8 +211,9 @@ func TestUserService_Create(t *testing.T) {
 			setupMock: func(m *MockUserRepo) {
 				// No hay setup especial, repo vacío
 			},
-			input:   validUser(),
-			wantErr: false,
+			input:    validUser(),
+			password: "test1234",
+			wantErr:  false,
 		},
 		{
 			name:      "create user with nil - should fail",
@@ -256,17 +257,19 @@ func TestUserService_Create(t *testing.T) {
 				m.dniIndex["12345678"] = &domain.User{ID: 99, Dni: "12345678"}
 				m.users[99] = &domain.User{ID: 99, Dni: "12345678"}
 			},
-			input:   validUser(), // Same DNI
-			wantErr: true,
-			errType: domain.ErrDniAlreadyExist,
+			input:    validUser(), // Same DNI
+			password: "test1234",
+			wantErr:  true,
+			errType:  domain.ErrDniAlreadyExist,
 		},
 		{
 			name: "create user - repository returns error",
 			setupMock: func(m *MockUserRepo) {
 				m.CreateErr = errors.New("database connection failed")
 			},
-			input:   validUser(),
-			wantErr: true,
+			input:    validUser(),
+			password: "test1234",
+			wantErr:  true,
 		},
 	}
 	for _, tt := range tests {
@@ -277,7 +280,7 @@ func TestUserService_Create(t *testing.T) {
 			service := NewUserService(mockRepo)
 			ctx := context.Background()
 			// Act
-			err := service.Create(ctx, tt.input)
+			err := service.Create(ctx, tt.input, tt.password)
 			// Assert
 			if tt.wantErr {
 				if err == nil {
